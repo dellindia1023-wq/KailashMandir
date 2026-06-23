@@ -1,0 +1,87 @@
+{
+  "name": "Kailash Mahadev Temple Agra | Kailash Mandir Agra",
+  "short_name": "Kailash Mandir",
+  "description": "Official app for kailash mandir agra, kailash mahadev temple — darshan timings, live darshan, puja booking & donations in Agra.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#FFF8F0",
+  "theme_color": "#C41C3B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["religion", "lifestyle", "spirituality"],
+  "lang": "en",
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Darshan Timings",
+      "url": "/darshan-timings",
+      "description": "Kailash mandir agra darshan & aarti schedule"
+    },
+    {
+      "name": "Live Darshan",
+      "url": "/live-darshan",
+      "description": "Watch live Shiva darshan"
+    },
+    {
+      "name": "Donate",
+      "url": "/donate",
+      "description": "Support Kailash Mahadev Temple"
+    },
+    {
+      "name": "Social",
+      "url": "/social",
+      "description": "Facebook, Instagram, YouTube, X"
+    }
+  ]
+}

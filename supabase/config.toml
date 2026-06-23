@@ -1,0 +1,43 @@
+project_id = "vgqqcafrkydpothcvtan"
+
+[functions.send-booking-reminders]
+verify_jwt = false
+
+[functions.create-priest]
+verify_jwt = false
+
+[functions.create-donation-order]
+verify_jwt = false
+
+[functions.verify-donation-payment]
+verify_jwt = false
+
+[functions.create-razorpay-order]
+verify_jwt = false
+
+[functions.verify-razorpay-payment]
+verify_jwt = false
+
+[functions.send-booking-email]
+verify_jwt = false
+
+[functions.temple-chat]
+verify_jwt = false
+
+[functions.toggle-live-stream]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.astrology-ai]
+verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.seed-super-admin]
+verify_jwt = false

@@ -1,0 +1,1 @@
+ALTER TABLE public.live_stream_settings ADD COLUMN IF NOT EXISTS stream_type TEXT NOT NULL DEFAULT 'hls' CHECK (stream_type IN ('hls', 'youtube', 'upload'));
