@@ -149,9 +149,18 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
               throw new Error(verifyError.message || "Payment verification failed");
             }
 
+            // Surface backend error details (verify-razorpay-payment now returns meaningful `error`)
+            if (!verifyData?.success) {
+              const backendMessage = (verifyData as any)?.error || "Payment verification failed";
+              throw new Error(backendMessage);
+            }
+
             toast.success("Puja booked successfully! 🙏 Confirmation email sent.");
             resetForm();
             onOpenChange(false);
+
+            // Navigate to bookings to show confirmation
+            window.location.href = "/dashboard/bookings";
           } catch (error: any) {
             console.error("Verification error:", error);
             toast.error("Payment verification failed. Please contact support.");

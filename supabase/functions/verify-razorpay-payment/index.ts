@@ -63,25 +63,38 @@ serve(async (req: Request) => {
 
     const { bookingId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = body as any;
 
+    // Evidence logging (DO NOT log secrets)
+    console.log("[verify-razorpay-payment] start", {
+      bookingId,
+      razorpayOrderId,
+      razorpayPaymentId,
+      hasRazorpaySignature: typeof razorpaySignature === "string",
+      userId: user?.id,
+    });
+
     // Validate bookingId
     if (typeof bookingId !== "string" || !UUID_REGEX.test(bookingId)) {
-      return new Response(JSON.stringify({ error: "Invalid booking ID" }), {
+      console.error("[verify-razorpay-payment] invalid bookingId", { bookingId });
+      return new Response(JSON.stringify({ error: "Invalid booking ID", bookingId }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
     // Validate Razorpay IDs
     if (typeof razorpayOrderId !== "string" || !RAZORPAY_ID_REGEX.test(razorpayOrderId)) {
-      return new Response(JSON.stringify({ error: "Invalid order ID" }), {
+      console.error("[verify-razorpay-payment] invalid razorpayOrderId", { razorpayOrderId });
+      return new Response(JSON.stringify({ error: "Invalid order ID", razorpayOrderId }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
     if (typeof razorpayPaymentId !== "string" || !RAZORPAY_ID_REGEX.test(razorpayPaymentId)) {
-      return new Response(JSON.stringify({ error: "Invalid payment ID" }), {
+      console.error("[verify-razorpay-payment] invalid razorpayPaymentId", { razorpayPaymentId });
+      return new Response(JSON.stringify({ error: "Invalid payment ID", razorpayPaymentId }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
     if (typeof razorpaySignature !== "string" || !SIGNATURE_REGEX.test(razorpaySignature)) {
+      console.error("[verify-razorpay-payment] invalid razorpaySignature format", { razorpaySignatureLength: typeof razorpaySignature === "string" ? razorpaySignature.length : null });
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
@@ -89,15 +102,21 @@ serve(async (req: Request) => {
 
     const razorpayKeySecret = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_SECRET");
     if (!razorpayKeySecret) {
+      console.error("[verify-razorpay-payment] missing RAZORPAY_KEY_SECRET");
       return new Response(JSON.stringify({ error: "Payment credentials not configured" }), {
         status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
     const generatedSignature = await createHmacSignature(razorpayKeySecret, `${razorpayOrderId}|${razorpayPaymentId}`);
+    console.log("[verify-razorpay-payment] signature validation", {
+      bookingId,
+      userId: user?.id,
+      generatedSignatureMatches: generatedSignature === razorpaySignature,
+    });
 
     if (generatedSignature !== razorpaySignature) {
-      console.error("Signature mismatch for booking:", bookingId);
+      console.error("[verify-razorpay-payment] Signature mismatch", { bookingId, userId: user?.id });
 
       await supabase
         .from("puja_bookings")
@@ -108,9 +127,29 @@ serve(async (req: Request) => {
         .eq("id", bookingId)
         .eq("user_id", user.id);
 
-      return new Response(JSON.stringify({ error: "Payment verification failed" }), {
+      return new Response(JSON.stringify({ error: "Payment signature mismatch" }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
+    }
+
+    // Optional: check booking row exists for requested filters
+    try {
+      const { data: bookingProbe, error: bookingProbeError } = await supabase
+        .from("puja_bookings")
+        .select("id, user_id, payment_status")
+        .eq("id", bookingId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      console.log("[verify-razorpay-payment] booking probe", {
+        bookingId,
+        userId: user?.id,
+        found: !!bookingProbe,
+        probeError: bookingProbeError,
+        payment_status: (bookingProbe as any)?.payment_status,
+      });
+    } catch (probeErr) {
+      console.error("[verify-razorpay-payment] booking probe threw", probeErr);
     }
 
     const { data: booking, error: updateError } = await supabase
@@ -127,13 +166,30 @@ serve(async (req: Request) => {
       .single();
 
     if (updateError) {
-      console.error("Update error:", updateError);
-      return new Response(JSON.stringify({ error: "Failed to update booking" }), {
+      console.error("[verify-razorpay-payment] Update error", {
+        bookingId,
+        userId: user?.id,
+        updateError,
+      });
+
+      return new Response(JSON.stringify({
+        error: "Failed to update booking",
+        details: updateError,
+        bookingId,
+        userId: user?.id,
+      }), {
         status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
+    console.log("[verify-razorpay-payment] booking marked paid", {
+      bookingId,
+      userId: user?.id,
+      updatedPaymentStatus: "paid",
+    });
+
     // Send confirmation email
+    let emailStatus: { ok: boolean; status?: number; errorText?: string } | null = null;
     try {
       const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
         method: "POST",
@@ -148,13 +204,16 @@ serve(async (req: Request) => {
       });
 
       if (emailResponse.ok) {
-        console.log("Confirmation email sent");
+        emailStatus = { ok: true, status: emailResponse.status };
+        console.log("[verify-razorpay-payment] Confirmation email sent");
       } else {
         const errText = await emailResponse.text();
-        console.error("Failed to send confirmation email:", errText);
+        emailStatus = { ok: false, status: emailResponse.status, errorText: errText };
+        console.error("[verify-razorpay-payment] Failed to send confirmation email:", errText);
       }
     } catch (emailError) {
-      console.error("Email error:", emailError);
+      console.error("[verify-razorpay-payment] Email error:", emailError);
+      emailStatus = { ok: false, errorText: String(emailError) };
     }
 
     return new Response(
@@ -162,6 +221,7 @@ serve(async (req: Request) => {
         success: true,
         bookingId: booking.id,
         message: "Payment verified successfully",
+        email: emailStatus,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
