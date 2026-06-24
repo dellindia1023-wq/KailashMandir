@@ -228,9 +228,12 @@ export const useCreateBlog = () => {
 
   return useMutation({
     mutationFn: async (blog: Omit<Blog, "id" | "created_at" | "updated_at" | "created_by" | "updated_by" | "view_count">) => {
+      // Auto-generate SEO fields if empty
+      const enrichedBlog = autoGenerateBlogSEO(blog);
+      
       const { data, error } = await supabase
         .from("blogs")
-        .insert([{ ...blog, view_count: 0 }])
+        .insert([{ ...enrichedBlog, view_count: 0 }])
         .select()
         .single();
 
@@ -252,9 +255,12 @@ export const useUpdateBlog = () => {
 
   return useMutation({
     mutationFn: async (blog: Blog) => {
+      // Auto-generate SEO fields if empty
+      const enrichedBlog = autoGenerateBlogSEO(blog);
+      
       const { data, error } = await supabase
         .from("blogs")
-        .update(blog)
+        .update(enrichedBlog)
         .eq("id", blog.id)
         .select()
         .single();
@@ -435,4 +441,46 @@ export const generateSlug = (text: string): string => {
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+};
+
+// Helper function to auto-generate SEO fields if empty
+export const autoGenerateBlogSEO = (blog: Omit<Blog, "id" | "created_at" | "updated_at" | "created_by" | "updated_by" | "view_count"> | Blog) => {
+  const TEMPLE_KEYWORDS = [
+    "kailash mandir",
+    "kailash mahadev",
+    "kailash temple",
+    "kailash temple agra",
+    "Agra temple",
+    "Shiva temple",
+  ];
+
+  const seo_title = blog.seo_title?.trim()
+    ? blog.seo_title
+    : `${blog.title} | Kailash Mahadev Temple Agra`;
+
+  const seo_description = blog.seo_description?.trim()
+    ? blog.seo_description
+    : (blog.excerpt || blog.content.substring(0, 160))
+        .replace(/<[^>]*>/g, "")
+        .substring(0, 160)
+        .trim() + (blog.content.length > 160 ? "..." : "");
+
+  const seo_keywords = blog.seo_keywords?.trim()
+    ? blog.seo_keywords
+    : [
+        blog.title,
+        ...(blog.category?.name ? [blog.category.name] : []),
+        ...TEMPLE_KEYWORDS.slice(0, 3),
+        "Agra",
+      ]
+        .filter((k) => k && k.length > 0)
+        .slice(0, 10)
+        .join(", ");
+
+  return {
+    ...blog,
+    seo_title,
+    seo_description,
+    seo_keywords,
+  };
 };

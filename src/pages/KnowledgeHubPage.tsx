@@ -19,11 +19,7 @@ export default function KnowledgeHubPage() {
   const revealArticles = useScrollReveal();
   const { data: articles, isLoading, error } = useKnowledgeArticles();
 
-  console.log("KnowledgeHub - Articles loaded:", articles?.length || 0);
-  console.log("KnowledgeHub - Is loading:", isLoading);
-  console.log("Fetched Articles", articles);
-  if (error) console.error("KnowledgeHub - Error:", error);
-
+  if (error) console.error("Knowledge Hub - Failed to load articles:", error);
 
   const toggleExpand = (articleId: string) => {
     const newExpanded = new Set(expandedArticles);
@@ -36,14 +32,11 @@ export default function KnowledgeHubPage() {
   };
 
   const filteredArticles = (articles || []).filter((article) => {
-    const matchesSearch = article.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      article.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (article.category || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = article.question?.toLowerCase?.().includes(searchQuery.toLowerCase()) ||
+      article.answer?.toLowerCase?.().includes(searchQuery.toLowerCase()) ||
+      (article.category || "")?.toLowerCase?.().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
-
-  console.log("Search query", searchQuery);
-  console.log("Filtered Articles", filteredArticles);
 
 
   // Generate FAQ Schema for Knowledge Hub
@@ -127,8 +120,8 @@ export default function KnowledgeHubPage() {
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : filteredArticles.length > 0 ? (
-              <div className={`space-y-4 ${revealArticles.className}`} ref={revealArticles.ref}>
-                {filteredArticles.map((article, index) => {
+              <div className="space-y-4" ref={revealArticles.ref}>
+                {filteredArticles.map((article) => {
                   const isExpanded = expandedArticles.has(article.id);
                   return (
                     <Card

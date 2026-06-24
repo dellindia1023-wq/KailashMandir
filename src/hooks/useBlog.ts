@@ -348,14 +348,57 @@ export const useSearchKnowledge = (query: string) => {
   });
 };
 
+// Helper function to auto-generate SEO fields for Knowledge Hub articles if empty
+export const autoGenerateKnowledgeSEO = (article: Partial<KnowledgeArticle> | KnowledgeArticle) => {
+  const TEMPLE_KEYWORDS = [
+    "kailash mandir",
+    "kailash mahadev",
+    "kailash temple",
+    "kailash temple agra",
+    "Agra temple",
+    "FAQ",
+  ];
+
+  const seo_title = article.seo_title?.trim()
+    ? article.seo_title
+    : `${article.question || "Article"} | Kailash Mahadev Temple Agra`;
+
+  const seo_description = article.seo_description?.trim()
+    ? article.seo_description
+    : (article.answer || "")
+        .replace(/<[^>]*>/g, "")
+        .substring(0, 160)
+        .trim() + (article.answer && article.answer.length > 160 ? "..." : "");
+
+  const seo_keywords_field = article.seo_keywords_field?.trim()
+    ? article.seo_keywords_field
+    : [
+        article.question,
+        article.category,
+        ...TEMPLE_KEYWORDS.slice(0, 2),
+        "Agra",
+      ]
+        .filter((k) => k && k.length > 0)
+        .slice(0, 10)
+        .join(", ");
+
+  return {
+    ...article,
+    seo_title,
+    seo_description,
+    seo_keywords_field,
+  };
+};
+
 export const useCreateKnowledgeArticle = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (article: Partial<KnowledgeArticle>) => {
+      const enrichedArticle = autoGenerateKnowledgeSEO(article);
       const { data, error } = await supabase
         .from("knowledge_articles")
-        .insert([article])
+        .insert([enrichedArticle])
         .select()
         .single();
 
@@ -380,9 +423,10 @@ export const useUpdateKnowledgeArticle = () => {
       id,
       ...article
     }: { id: string } & Partial<KnowledgeArticle>) => {
+      const enrichedArticle = autoGenerateKnowledgeSEO(article);
       const { data, error } = await supabase
         .from("knowledge_articles")
-        .update(article)
+        .update(enrichedArticle)
         .eq("id", id)
         .select()
         .single();
