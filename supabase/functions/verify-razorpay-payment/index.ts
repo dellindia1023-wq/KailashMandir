@@ -149,18 +149,25 @@ serve(async (req: Request) => {
     const generatedSignature = hasSignature ? await createHmacSignature(razorpayKeySecret, `${razorpayOrderId}|${razorpayPaymentId}`) : "";
     const razorpayPayment = await verifyPaymentWithRazorpay(razorpayKeyId, razorpayKeySecret, razorpayOrderId, razorpayPaymentId);
     const signatureMatches = hasSignature && generatedSignature === razorpaySignature;
+    const paymentVerified = !!razorpayPayment.verified;
 
     console.log("[verify-razorpay-payment] verification status", {
       bookingId,
       userId: user?.id,
       signatureMatches,
-      paymentVerifiedByRazorpay: razorpayPayment.verified,
+      paymentVerified,
       razorpayStatus: razorpayPayment.status,
       razorpayOrderId: razorpayPayment.orderId,
+      razorpayError: razorpayPayment.error,
     });
 
-    if (!signatureMatches && !razorpayPayment.verified) {
-      console.error("[verify-razorpay-payment] Signature mismatch and Razorpay payment not captured", { bookingId, userId: user?.id });
+    if (!paymentVerified && !signatureMatches) {
+      console.error("[verify-razorpay-payment] payment not verified by Razorpay and signature did not match", {
+        bookingId,
+        userId: user?.id,
+        razorpayStatus: razorpayPayment.status,
+        error: razorpayPayment.error,
+      });
 
       await supabase
         .from("puja_bookings")

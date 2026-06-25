@@ -138,9 +138,26 @@ serve(async (req: Request) => {
     ) : "";
     const razorpayPayment = await verifyPaymentWithRazorpay(razorpayKeyId, razorpayKeySecret, razorpayOrderId, razorpayPaymentId);
     const signatureMatches = hasSignature && generatedSignature === razorpaySignature;
+    const paymentVerified = !!razorpayPayment.verified;
 
-    if (!signatureMatches && !razorpayPayment.verified) {
-      console.error("[verify-donation-payment] Signature mismatch and Razorpay payment not captured", { donationId, userId: user.id });
+    console.log("[verify-donation-payment] verification status", {
+      donationId,
+      userId: user.id,
+      signaturePresent: hasSignature,
+      signatureMatches,
+      paymentVerified,
+      razorpayStatus: razorpayPayment.status,
+      razorpayOrderId: razorpayPayment.orderId,
+      razorpayError: razorpayPayment.error,
+    });
+
+    if (!paymentVerified && !signatureMatches) {
+      console.error("[verify-donation-payment] payment not verified by Razorpay and signature did not match", {
+        donationId,
+        userId: user.id,
+        razorpayStatus: razorpayPayment.status,
+        error: razorpayPayment.error,
+      });
       await supabase
         .from("donations")
         .update({ status: "failed" })
