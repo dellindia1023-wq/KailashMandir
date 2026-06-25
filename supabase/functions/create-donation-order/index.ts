@@ -7,8 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const VALID_TIERS = ["seva", "bhakt", "premium", "divine"];
-const MAX_AMOUNT = 10000000; // 1 crore
+const VALID_TIERS = ["seva", "bhakt", "premium", "divine", "custom"];
+const MAX_AMOUNT = 500000;
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -47,9 +47,15 @@ serve(async (req: Request) => {
 
     const { amount, tier } = body as any;
 
-    // Validate amount
-    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
-      return new Response(JSON.stringify({ error: `Invalid donation amount. Must be between 1 and ${MAX_AMOUNT.toLocaleString("en-IN")}` }), {
+    let parsedAmount: number | null = null;
+    if (typeof amount === "number" && Number.isFinite(amount)) {
+      parsedAmount = amount;
+    } else if (typeof amount === "string" && /^\d+$/.test(amount.trim())) {
+      parsedAmount = Number(amount);
+    }
+
+    if (parsedAmount === null || !Number.isInteger(parsedAmount) || parsedAmount < 1 || parsedAmount > MAX_AMOUNT) {
+      return new Response(JSON.stringify({ error: `Invalid donation amount. Must be a whole number between 1 and ${MAX_AMOUNT.toLocaleString("en-IN")}` }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
@@ -78,7 +84,7 @@ serve(async (req: Request) => {
         Authorization: `Basic ${encode(`${razorpayKeyId}:${razorpayKeySecret}`)}`,
       },
       body: JSON.stringify({
-        amount: Math.round(amount * 100),
+        amount: Math.round(parsedAmount * 100),
         currency: "INR",
         receipt: `donation_${Date.now()}`,
         notes: {
@@ -103,7 +109,7 @@ serve(async (req: Request) => {
       .from("donations")
       .insert({
         user_id: user.id,
-        amount: amount,
+        amount: parsedAmount,
         tier: safeTier,
         status: "pending",
         payment_method: "razorpay",

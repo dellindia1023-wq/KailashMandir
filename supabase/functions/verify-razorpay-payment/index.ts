@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -23,6 +24,44 @@ async function createHmacSignature(secret: string, message: string): Promise<str
   return Array.from(new Uint8Array(signature))
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+async function verifyPaymentWithRazorpay(
+  keyId: string,
+  keySecret: string,
+  razorpayOrderId: string,
+  razorpayPaymentId: string
+): Promise<{ verified: boolean; status?: string; orderId?: string; error?: string }> {
+  try {
+    const response = await fetch(`https://api.razorpay.com/v1/payments/${razorpayPaymentId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${encode(`${keyId}:${keySecret}`)}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[verify-razorpay-payment] Razorpay payment lookup failed", {
+        razorpayPaymentId,
+        status: response.status,
+        errorText,
+      });
+      return { verified: false, error: errorText };
+    }
+
+    const payment = await response.json();
+    const verified = payment?.status === "captured" && payment?.order_id === razorpayOrderId;
+    return {
+      verified,
+      status: payment?.status,
+      orderId: payment?.order_id,
+    };
+  } catch (error: any) {
+    console.error("[verify-razorpay-payment] Razorpay payment lookup threw", error);
+    return { verified: false, error: String(error) };
+  }
 }
 
 serve(async (req: Request) => {
@@ -93,30 +132,35 @@ serve(async (req: Request) => {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
-    if (typeof razorpaySignature !== "string" || !SIGNATURE_REGEX.test(razorpaySignature)) {
-      console.error("[verify-razorpay-payment] invalid razorpaySignature format", { razorpaySignatureLength: typeof razorpaySignature === "string" ? razorpaySignature.length : null });
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
-        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    const hasSignature = typeof razorpaySignature === "string" && razorpaySignature.trim().length > 0;
+    if (hasSignature && !SIGNATURE_REGEX.test(razorpaySignature)) {
+      console.error("[verify-razorpay-payment] invalid razorpaySignature format", { razorpaySignatureLength: razorpaySignature.length });
     }
 
+    const razorpayKeyId = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_ID");
     const razorpayKeySecret = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_SECRET");
-    if (!razorpayKeySecret) {
-      console.error("[verify-razorpay-payment] missing RAZORPAY_KEY_SECRET");
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      console.error("[verify-razorpay-payment] missing Razorpay credentials", { hasKeyId: !!razorpayKeyId, hasKeySecret: !!razorpayKeySecret });
       return new Response(JSON.stringify({ error: "Payment credentials not configured" }), {
         status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const generatedSignature = await createHmacSignature(razorpayKeySecret, `${razorpayOrderId}|${razorpayPaymentId}`);
-    console.log("[verify-razorpay-payment] signature validation", {
+    const generatedSignature = hasSignature ? await createHmacSignature(razorpayKeySecret, `${razorpayOrderId}|${razorpayPaymentId}`) : "";
+    const razorpayPayment = await verifyPaymentWithRazorpay(razorpayKeyId, razorpayKeySecret, razorpayOrderId, razorpayPaymentId);
+    const signatureMatches = hasSignature && generatedSignature === razorpaySignature;
+
+    console.log("[verify-razorpay-payment] verification status", {
       bookingId,
       userId: user?.id,
-      generatedSignatureMatches: generatedSignature === razorpaySignature,
+      signatureMatches,
+      paymentVerifiedByRazorpay: razorpayPayment.verified,
+      razorpayStatus: razorpayPayment.status,
+      razorpayOrderId: razorpayPayment.orderId,
     });
 
-    if (generatedSignature !== razorpaySignature) {
-      console.error("[verify-razorpay-payment] Signature mismatch", { bookingId, userId: user?.id });
+    if (!signatureMatches && !razorpayPayment.verified) {
+      console.error("[verify-razorpay-payment] Signature mismatch and Razorpay payment not captured", { bookingId, userId: user?.id });
 
       await supabase
         .from("puja_bookings")
@@ -127,7 +171,7 @@ serve(async (req: Request) => {
         .eq("id", bookingId)
         .eq("user_id", user.id);
 
-      return new Response(JSON.stringify({ error: "Payment signature mismatch" }), {
+      return new Response(JSON.stringify({ error: "Payment verification failed" }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
@@ -156,6 +200,7 @@ serve(async (req: Request) => {
       .from("puja_bookings")
       .update({
         payment_id: razorpayPaymentId,
+        razorpay_order_id: razorpayOrderId,
         razorpay_signature: razorpaySignature,
         payment_status: "paid",
         updated_at: new Date().toISOString(),

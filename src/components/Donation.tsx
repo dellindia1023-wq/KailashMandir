@@ -1,59 +1,28 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Wallet, CreditCard, Smartphone, CheckCircle, Loader2 } from "lucide-react";
+import { Heart, Wallet, CreditCard, Smartphone, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import DonationQRCode from "./DonationQRCode";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  DEFAULT_DONATION_AMOUNT,
+  DONATION_MAX_AMOUNT,
+  DONATION_MIN_AMOUNT,
+  getDonationValidationError,
+} from "@/lib/donationValidation";
+import { DEFAULT_DONATION_SETTINGS, fetchDonationSettings, type DonationSettings } from "@/lib/donationSettings";
 
 declare global {
   interface Window {
     Razorpay: any;
   }
 }
-
-const donationTiers = [
-  {
-    name: "Seva",
-    tier: "seva",
-    amount: 501,
-    displayAmount: "₹501",
-    descKey: "donation.sevaDesc",
-    benefits: ["Name in daily prayers", "Digital prasad receipt"],
-    popular: false,
-  },
-  {
-    name: "Archana",
-    tier: "bhakta",
-    amount: 1101,
-    displayAmount: "₹1,101",
-    descKey: "donation.archanaDesc",
-    benefits: ["Personal puja on your behalf", "Blessed prasad delivery", "Certificate of donation"],
-    popular: true,
-  },
-  {
-    name: "Abhishekam",
-    tier: "dharma",
-    amount: 2501,
-    displayAmount: "₹2,501",
-    descKey: "donation.abhishekamDesc",
-    benefits: ["Rudrabhishek in your name", "Family blessings", "Video of ceremony", "Premium prasad kit"],
-    popular: false,
-  },
-  {
-    name: "Mahadan",
-    tier: "mahadaan",
-    amount: 5001,
-    displayAmount: "₹5,001",
-    descKey: "donation.mahadanDesc",
-    benefits: ["All above benefits", "Name on donor wall", "Annual VIP darshan pass", "Direct priest blessing call"],
-    popular: false,
-  },
-];
 
 const paymentMethods = [
   { name: "UPI", icon: Smartphone },
@@ -65,7 +34,37 @@ const Donation = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
+  const [donationAmount, setDonationAmount] = useState<string>(String(DEFAULT_DONATION_AMOUNT));
+  const [customAmountMode, setCustomAmountMode] = useState(false);
+  const [settings, setSettings] = useState<DonationSettings>(DEFAULT_DONATION_SETTINGS);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const { t } = useLanguage();
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      setSettingsLoading(true);
+      try {
+        const loaded = await fetchDonationSettings();
+        setSettings(loaded);
+        setDonationAmount(String(loaded.default_amount));
+        setCustomAmountMode(false);
+      } catch (error) {
+        console.error("Failed to load donation settings", error);
+        setSettings(DEFAULT_DONATION_SETTINGS);
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const parsedDonationAmount = useMemo(() => Number(donationAmount || settings.default_amount), [donationAmount, settings.default_amount]);
+  const donationValidationError = useMemo(
+    () => getDonationValidationError(donationAmount, { minAmount: settings.minimum_amount, maxAmount: settings.maximum_amount }),
+    [donationAmount, settings.maximum_amount, settings.minimum_amount]
+  );
+  const selectedAmountLabel = useMemo(() => `₹${parsedDonationAmount.toLocaleString("en-IN")}`, [parsedDonationAmount]);
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -81,14 +80,37 @@ const Donation = () => {
     });
   };
 
-  const handleDonate = async (tier: typeof donationTiers[0]) => {
+  const handleDonate = async () => {
     if (!user) {
       toast.info("Please sign in to make a donation");
       navigate("/auth");
       return;
     }
 
-    setLoadingTier(tier.tier);
+    const validationError = getDonationValidationError(donationAmount, { minAmount: settings.minimum_amount, maxAmount: settings.maximum_amount });
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    const amount = Number(donationAmount);
+    if (amount < settings.minimum_amount || amount > settings.maximum_amount) {
+      toast.error(`Donation amount must be between ₹${settings.minimum_amount.toLocaleString("en-IN")} and ₹${settings.maximum_amount.toLocaleString("en-IN")}.`);
+      return;
+    }
+
+    if (!settings.enable_razorpay) {
+      toast.error("Razorpay donations are currently unavailable.");
+      return;
+    }
+
+    const suggestedAmounts = settings.suggested_amounts;
+    if (!settings.enable_custom_amount && !suggestedAmounts.includes(amount)) {
+      toast.error("Please choose one of the suggested donation amounts.");
+      return;
+    }
+
+    setLoadingTier("custom");
 
     try {
       const scriptLoaded = await loadRazorpayScript();
@@ -100,8 +122,8 @@ const Donation = () => {
         "create-donation-order",
         {
           body: {
-            amount: tier.amount,
-            tier: tier.tier,
+            amount,
+            tier: "custom",
           },
         }
       );
@@ -119,7 +141,7 @@ const Donation = () => {
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Shri Kailash Mahadev Temple",
-        description: `${tier.name} Donation`,
+        description: `Donation of ${selectedAmountLabel}`,
         order_id: orderData.orderId,
         handler: async (response: any) => {
           try {
@@ -169,6 +191,19 @@ const Donation = () => {
     }
   };
 
+  const handleQuickAmountSelect = (amount: number) => {
+    setDonationAmount(String(amount));
+    setCustomAmountMode(false);
+  };
+
+  const handleCustomAmountToggle = () => {
+    if (!settings.enable_custom_amount) {
+      return;
+    }
+    setCustomAmountMode(true);
+    setDonationAmount(donationAmount || String(settings.default_amount));
+  };
+
   return (
     <section id="donate" className="py-10 md:py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -186,64 +221,82 @@ const Donation = () => {
           </p>
         </div>
 
-        {/* Donation Tiers - horizontal scroll on mobile */}
-        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10 md:mb-12 overflow-x-auto pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scrollbar-hide">
-          {donationTiers.map((tier) => (
-            <Card
-              key={tier.name}
-              className={`relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-2 active:scale-[0.98] min-w-[280px] md:min-w-0 snap-center flex-shrink-0 md:flex-shrink ${
-                tier.popular
-                  ? "border-2 border-gold bg-gradient-to-br from-gold/10 to-saffron/5"
-                  : "hover:border-primary/30"
-              }`}
-            >
-              {tier.popular && (
-                <Badge className="absolute top-0 right-0 rounded-none rounded-bl-lg bg-gold text-accent-foreground text-[10px] md:text-xs">
-                  {t("donation.mostPopular")}
-                </Badge>
-              )}
-              <CardHeader className="pb-3 md:pb-4">
-                <p className="text-xs md:text-sm text-muted-foreground font-medium">{tier.name}</p>
-                <CardTitle className={`font-heading text-2xl md:text-3xl ${tier.popular ? "text-gold" : "text-primary"}`}>
-                  {tier.displayAmount}
-                </CardTitle>
-                <p className="text-xs md:text-sm text-muted-foreground">{t(tier.descKey)}</p>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 md:space-y-3 mb-4 md:mb-6">
-                  {tier.benefits.map((benefit) => (
-                    <li key={benefit} className="flex items-start gap-2 text-xs md:text-sm">
-                      <CheckCircle className={`h-3.5 w-3.5 md:h-4 md:w-4 mt-0.5 flex-shrink-0 ${
-                        tier.popular ? "text-gold" : "text-primary"
-                      }`} />
-                      <span className="text-muted-foreground">{benefit}</span>
-                    </li>
+        <div className="max-w-2xl mx-auto mb-10 md:mb-12">
+          <Card className="border-primary/20 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-heading text-2xl text-primary">Make a Custom Donation</CardTitle>
+              <p className="text-sm text-muted-foreground">Choose an amount below or enter your own. Payments still go through the same secure Razorpay flow.</p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {!settingsLoading && settings.enable_suggested_amounts && settings.suggested_amounts.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {settings.suggested_amounts.map((amount) => (
+                    <Button
+                      key={amount}
+                      type="button"
+                      variant={String(amount) === donationAmount && !customAmountMode ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() => handleQuickAmountSelect(amount)}
+                    >
+                      ₹{amount.toLocaleString("en-IN")}
+                    </Button>
                   ))}
-                </ul>
-                <Button
-                  className={`w-full h-10 md:h-11 active:scale-[0.97] ${
-                    tier.popular
-                      ? "bg-gold hover:bg-gold-light text-accent-foreground"
-                      : "bg-gradient-saffron hover:opacity-90 text-primary-foreground"
-                  }`}
-                  onClick={() => handleDonate(tier)}
-                  disabled={loadingTier === tier.tier}
-                >
-                  {loadingTier === tier.tier ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {t("common.processing")}
-                    </>
-                  ) : (
-                    <>
-                      <Heart className="h-4 w-4 mr-2" />
-                      {t("common.donateNow")}
-                    </>
+                </div>
+              )}
+
+              {settings.enable_custom_amount && (
+                <div className="space-y-2">
+                  <label htmlFor="donation-amount" className="text-sm font-medium text-foreground">
+                    Donation Amount (₹)
+                  </label>
+                  <Input
+                    id="donation-amount"
+                    inputMode="numeric"
+                    value={donationAmount}
+                    onChange={(event) => {
+                      const nextValue = event.target.value.replace(/\D/g, "");
+                      setDonationAmount(nextValue);
+                      setCustomAmountMode(true);
+                    }}
+                    placeholder="Enter amount"
+                    className="text-lg"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Minimum ₹{settings.minimum_amount.toLocaleString("en-IN")}, maximum ₹{settings.maximum_amount.toLocaleString("en-IN")}, whole rupees only.
+                  </p>
+                  {donationValidationError && (
+                    <p className="text-sm text-red-600">{donationValidationError}</p>
                   )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                </div>
+              )}
+
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">You will donate</p>
+                    <p className="text-2xl font-heading font-semibold text-primary">{selectedAmountLabel}</p>
+                  </div>
+                  <Button
+                    className="bg-gradient-saffron hover:opacity-90 text-primary-foreground"
+                    onClick={handleDonate}
+                    disabled={loadingTier === "custom" || Boolean(donationValidationError) || settingsLoading}
+                  >
+                    {loadingTier === "custom" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("common.processing")}
+                      </>
+                    ) : (
+                      <>
+                        <Heart className="mr-2 h-4 w-4" />
+                        {t("common.donateNow")}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* QR Code Section */}
@@ -255,7 +308,7 @@ const Donation = () => {
         <div className="text-center">
           <p className="text-muted-foreground text-sm mb-3 md:mb-4">{t("donation.acceptedPayments")}</p>
           <div className="flex items-center justify-center gap-3 md:gap-4">
-            {paymentMethods.map((method) => (
+            {paymentMethods.filter((method) => settings.enable_quick_upi || method.name !== "UPI").map((method) => (
               <div
                 key={method.name}
                 className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg bg-muted"

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, Wifi, WifiOff, Save, Loader2, Youtube, Upload, Radio } from "lucide-react";
+import DonationSettingsPanel from "@/components/admin/DonationSettingsPanel";
 
 type StreamType = "hls" | "youtube" | "upload";
 
@@ -323,6 +324,8 @@ const AdminSettings = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <DonationSettingsPanel />
 
       <DarshanScheduleManager />
 
