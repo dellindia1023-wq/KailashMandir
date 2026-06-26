@@ -12,6 +12,7 @@ import useScrollReveal from "@/hooks/useScrollReveal";
 import { Loader2, Search, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import templeHero from "@/assets/gallery/devotees-prayer.jpg";
 import { BASE_URL } from "@/constants/seo";
+import { buildContentAutomationMetadata, buildKnowledgeContentMetadata } from "@/lib/contentSeo";
 
 export default function KnowledgeHubPage() {
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
@@ -38,6 +39,24 @@ export default function KnowledgeHubPage() {
     return matchesSearch;
   });
 
+
+  const knowledgeMetadata = (articles || []).map((article) => buildKnowledgeContentMetadata({
+    question: article.question,
+    answer: article.answer,
+    category: article.category,
+    slug: article.id,
+    baseUrl: BASE_URL,
+  }));
+  const metadataById = new Map(knowledgeMetadata.map((metadata) => [metadata.canonical_url, metadata]));
+  const automationMetadataById = new Map((articles || []).map((article) => [article.id, buildContentAutomationMetadata({
+    question: article.question,
+    answer: article.answer,
+    content: article.answer,
+    category: article.category,
+    slug: article.id,
+    baseUrl: BASE_URL,
+    type: "knowledge",
+  })]));
 
   // Generate FAQ Schema for Knowledge Hub
   const faqSchema = {
@@ -72,6 +91,15 @@ export default function KnowledgeHubPage() {
       },
     ],
   };
+  const searchActionSchema = {
+    "@context": "https://schema.org",
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${BASE_URL}/knowledge-hub?query={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,7 +109,7 @@ export default function KnowledgeHubPage() {
         keywords="FAQ, knowledge hub, temple questions, kailash mahadev, frequently asked questions"
         canonical="/knowledge-hub"
         breadcrumbLabel="Knowledge Hub"
-        jsonLd={[faqSchema, breadcrumbSchema]}
+        jsonLd={[faqSchema, breadcrumbSchema, searchActionSchema]}
       />
       <Header />
       <PageHeroBanner
@@ -123,6 +151,7 @@ export default function KnowledgeHubPage() {
               <div className="space-y-4" ref={revealArticles.ref}>
                 {filteredArticles.map((article) => {
                   const isExpanded = expandedArticles.has(article.id);
+                  const automationMetadata = automationMetadataById.get(article.id);
                   return (
                     <Card
                       key={article.id}
@@ -159,9 +188,43 @@ export default function KnowledgeHubPage() {
                       {isExpanded && (
                         <div className="border-t bg-muted/20">
                           <CardContent className="pt-6">
+                            {article.featured_image_url && (
+                              <img
+                                src={article.featured_image_url}
+                                alt={article.image_alt || article.question}
+                                className="mb-4 h-48 w-full rounded-lg object-cover"
+                              />
+                            )}
                             <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed text-base">
                               {article.answer}
                             </p>
+                            {metadataById.get(`${BASE_URL}/knowledge-hub#${article.id}`) && (
+                              <div className="mt-4 space-y-3 rounded-md border bg-background/70 p-3 text-sm text-muted-foreground">
+                                <div>
+                                  <strong className="text-foreground">Quick answer:</strong>{" "}
+                                  {metadataById.get(`${BASE_URL}/knowledge-hub#${article.id}`)?.answer_first_paragraph}
+                                </div>
+                                {metadataById.get(`${BASE_URL}/knowledge-hub#${article.id}`)?.context_blocks?.length ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {metadataById.get(`${BASE_URL}/knowledge-hub#${article.id}`)?.context_blocks?.slice(0, 3).map((block) => (
+                                      <span key={block.title} className="rounded-full border px-2 py-1 text-xs text-foreground">
+                                        {block.title}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
+                            {automationMetadata?.question_engine?.question_variations?.length ? (
+                              <div className="mt-4 rounded-md border bg-background/70 p-3 text-sm text-muted-foreground">
+                                <p className="font-semibold text-foreground">Suggested follow-ups</p>
+                                <ul className="mt-2 space-y-1">
+                                  {automationMetadata.question_engine.question_variations.slice(0, 3).map((question) => (
+                                    <li key={question}>• {question}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
                             <div className="text-sm pt-6 text-muted-foreground border-t mt-6">
                               👁️ Views: {article.view_count.toLocaleString()}
                             </div>

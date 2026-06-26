@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useKnowledgeArticles, useCreateKnowledgeArticle, useUpdateKnowledgeArticle, useDeleteKnowledgeArticle } from "@/hooks/useBlog";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +27,8 @@ export const AdminKnowledgeHubManagement = () => {
     seo_description: "",
     seo_keywords_field: "",
     search_keywords: "",
+    featured_image_url: "",
+    image_alt: "",
     is_featured: false,
   });
 
@@ -61,6 +64,8 @@ export const AdminKnowledgeHubManagement = () => {
       seo_description: "",
       seo_keywords_field: "",
       search_keywords: "",
+      featured_image_url: "",
+      image_alt: "",
       is_featured: false,
     });
     setEditingArticle(null);
@@ -77,9 +82,22 @@ export const AdminKnowledgeHubManagement = () => {
       seo_description: article.seo_description || "",
       seo_keywords_field: article.seo_keywords_field || "",
       search_keywords: article.search_keywords || "",
+      featured_image_url: article.featured_image_url || "",
+      image_alt: (article as any).image_alt || "",
       is_featured: article.is_featured,
     });
     setShowForm(true);
+  };
+
+  const uploadFeaturedImage = async (file: File) => {
+    const fileExt = file.name.split(".").pop();
+    const filePath = `knowledge/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage.from("content").upload(filePath, file, { upsert: true });
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from("content").getPublicUrl(filePath);
+    return data.publicUrl;
   };
 
   const handleDelete = (articleId: string) => {
@@ -195,6 +213,51 @@ export const AdminKnowledgeHubManagement = () => {
                     onChange={(e) => setFormData({ ...formData, search_keywords: e.target.value })}
                     placeholder="Additional search terms"
                     className="mt-1"
+                  />
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="featured_image_url">Featured Image URL</Label>
+                    <Input
+                      id="featured_image_url"
+                      value={formData.featured_image_url}
+                      onChange={(e) => setFormData({ ...formData, featured_image_url: e.target.value })}
+                      placeholder="https://.../image.jpg"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="image_alt">Image Alt Text</Label>
+                    <Input
+                      id="image_alt"
+                      value={formData.image_alt}
+                      onChange={(e) => setFormData({ ...formData, image_alt: e.target.value })}
+                      placeholder="Describe the image"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  <Label htmlFor="knowledge_featured_image_upload">Or upload image to content storage</Label>
+                  <Input
+                    id="knowledge_featured_image_upload"
+                    type="file"
+                    accept="image/*"
+                    className="mt-2"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const url = await uploadFeaturedImage(file);
+                        setFormData((prev) => ({ ...prev, featured_image_url: url }));
+                        toast.success("Image uploaded successfully");
+                      } catch (error) {
+                        console.error(error);
+                        toast.error("Image upload failed");
+                      }
+                    }}
                   />
                 </div>
               </div>

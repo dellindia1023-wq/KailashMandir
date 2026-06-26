@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { buildContentAutomationMetadata } from "@/lib/contentSeo";
 
 // Types
 export interface BlogCategory {
@@ -189,9 +190,26 @@ export const useCreateBlog = () => {
 
   return useMutation({
     mutationFn: async (blog: Partial<Blog>) => {
+      const automationMetadata = buildContentAutomationMetadata({
+        title: blog.title,
+        content: blog.content,
+        excerpt: blog.excerpt,
+        slug: blog.slug,
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        category: blog.category_id as string | undefined,
+        type: "blog",
+      });
+      const payload = {
+        ...blog,
+        slug: blog.slug?.trim() || automationMetadata.slug,
+        seo_title: blog.seo_title?.trim() || automationMetadata.seo_title,
+        seo_description: blog.seo_description?.trim() || automationMetadata.seo_description,
+        seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
+        canonical_url: blog.canonical_url?.trim() || automationMetadata.canonical_url,
+      };
       const { data, error } = await supabase
         .from("blogs")
-        .insert([blog])
+        .insert([payload])
         .select()
         .single();
 
@@ -216,9 +234,26 @@ export const useUpdateBlog = () => {
       id,
       ...blog
     }: { id: string } & Partial<Blog>) => {
+      const automationMetadata = buildContentAutomationMetadata({
+        title: blog.title,
+        content: blog.content,
+        excerpt: blog.excerpt,
+        slug: blog.slug,
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        category: blog.category_id as string | undefined,
+        type: "blog",
+      });
+      const payload = {
+        ...blog,
+        slug: blog.slug?.trim() || automationMetadata.slug,
+        seo_title: blog.seo_title?.trim() || automationMetadata.seo_title,
+        seo_description: blog.seo_description?.trim() || automationMetadata.seo_description,
+        seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
+        canonical_url: blog.canonical_url?.trim() || automationMetadata.canonical_url,
+      };
       const { data, error } = await supabase
         .from("blogs")
-        .update(blog)
+        .update(payload)
         .eq("id", id)
         .select()
         .single();
@@ -395,7 +430,21 @@ export const useCreateKnowledgeArticle = () => {
 
   return useMutation({
     mutationFn: async (article: Partial<KnowledgeArticle>) => {
-      const enrichedArticle = autoGenerateKnowledgeSEO(article);
+      const automationMetadata = buildContentAutomationMetadata({
+        question: article.question,
+        answer: article.answer,
+        content: article.answer,
+        category: article.category,
+        slug: (article as any).slug,
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        type: "knowledge",
+      });
+      const enrichedArticle = {
+        ...autoGenerateKnowledgeSEO(article),
+        seo_title: article.seo_title?.trim() || automationMetadata.seo_title,
+        seo_description: article.seo_description?.trim() || automationMetadata.seo_description,
+        seo_keywords_field: article.seo_keywords_field?.trim() || automationMetadata.seo_keywords,
+      };
       const { data, error } = await supabase
         .from("knowledge_articles")
         .insert([enrichedArticle])
@@ -423,7 +472,21 @@ export const useUpdateKnowledgeArticle = () => {
       id,
       ...article
     }: { id: string } & Partial<KnowledgeArticle>) => {
-      const enrichedArticle = autoGenerateKnowledgeSEO(article);
+      const automationMetadata = buildContentAutomationMetadata({
+        question: article.question,
+        answer: article.answer,
+        content: article.answer,
+        category: article.category,
+        slug: (article as any).slug,
+        baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        type: "knowledge",
+      });
+      const enrichedArticle = {
+        ...autoGenerateKnowledgeSEO(article),
+        seo_title: article.seo_title?.trim() || automationMetadata.seo_title,
+        seo_description: article.seo_description?.trim() || automationMetadata.seo_description,
+        seo_keywords_field: article.seo_keywords_field?.trim() || automationMetadata.seo_keywords,
+      };
       const { data, error } = await supabase
         .from("knowledge_articles")
         .update(enrichedArticle)
