@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { evaluateRazorpayVerification } from "../shared/razorpay-verification.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -135,6 +136,9 @@ serve(async (req: Request) => {
     const hasSignature = typeof razorpaySignature === "string" && razorpaySignature.trim().length > 0;
     if (hasSignature && !SIGNATURE_REGEX.test(razorpaySignature)) {
       console.error("[verify-razorpay-payment] invalid razorpaySignature format", { razorpaySignatureLength: razorpaySignature.length });
+      return new Response(JSON.stringify({ error: "Invalid razorpay signature" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const razorpayKeyId = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_ID");
@@ -148,24 +152,33 @@ serve(async (req: Request) => {
 
     const generatedSignature = hasSignature ? await createHmacSignature(razorpayKeySecret, `${razorpayOrderId}|${razorpayPaymentId}`) : "";
     const razorpayPayment = await verifyPaymentWithRazorpay(razorpayKeyId, razorpayKeySecret, razorpayOrderId, razorpayPaymentId);
-    const signatureMatches = hasSignature && generatedSignature === razorpaySignature;
-    const paymentVerified = !!razorpayPayment.verified;
+    const verification = evaluateRazorpayVerification({
+      hasSignature,
+      razorpaySignature,
+      generatedSignature,
+      paymentStatus: razorpayPayment.status,
+      paymentOrderId: razorpayPayment.orderId,
+      expectedOrderId: razorpayOrderId,
+    });
 
     console.log("[verify-razorpay-payment] verification status", {
       bookingId,
       userId: user?.id,
-      signatureMatches,
-      paymentVerified,
+      signatureMatches: verification.signatureMatches,
+      paymentVerified: verification.paymentVerified,
+      verificationPassed: verification.verificationPassed,
       razorpayStatus: razorpayPayment.status,
       razorpayOrderId: razorpayPayment.orderId,
       razorpayError: razorpayPayment.error,
     });
 
-    if (!paymentVerified && !signatureMatches) {
-      console.error("[verify-razorpay-payment] payment not verified by Razorpay and signature did not match", {
+    if (!verification.verificationPassed) {
+      console.error("[verify-razorpay-payment] payment verification failed", {
         bookingId,
         userId: user?.id,
+        failureReason: verification.failureReason,
         razorpayStatus: razorpayPayment.status,
+        razorpayOrderId: razorpayPayment.orderId,
         error: razorpayPayment.error,
       });
 

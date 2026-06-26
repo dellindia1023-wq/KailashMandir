@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { evaluateRazorpayVerification } from "../shared/razorpay-verification.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,6 +102,14 @@ serve(async (req: Request) => {
 
     const { donationId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = body as any;
 
+    console.log("[verify-donation-payment] request received", {
+      donationId,
+      razorpayOrderId,
+      razorpayPaymentId,
+      hasSignature: typeof razorpaySignature === "string" && razorpaySignature.trim().length > 0,
+      userId: user.id,
+    });
+
     // Validate donationId
     if (typeof donationId !== "string" || !UUID_REGEX.test(donationId)) {
       return new Response(JSON.stringify({ error: "Invalid donation ID" }), {
@@ -122,10 +131,19 @@ serve(async (req: Request) => {
     const hasSignature = typeof razorpaySignature === "string" && razorpaySignature.trim().length > 0;
     if (hasSignature && !SIGNATURE_REGEX.test(razorpaySignature)) {
       console.error("[verify-donation-payment] invalid razorpaySignature format", { razorpaySignatureLength: razorpaySignature.length });
+      return new Response(JSON.stringify({ error: "Invalid razorpay signature" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const razorpayKeyId = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_ID");
     const razorpayKeySecret = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_SECRET");
+    console.log("[verify-donation-payment] Razorpay credentials status", {
+      donationId,
+      hasKeyId: !!razorpayKeyId,
+      hasKeySecret: !!razorpayKeySecret,
+    });
+
     if (!razorpayKeyId || !razorpayKeySecret) {
       return new Response(JSON.stringify({ error: "Payment credentials not configured" }), {
         status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -136,26 +154,45 @@ serve(async (req: Request) => {
       razorpayKeySecret,
       `${razorpayOrderId}|${razorpayPaymentId}`
     ) : "";
-    const razorpayPayment = await verifyPaymentWithRazorpay(razorpayKeyId, razorpayKeySecret, razorpayOrderId, razorpayPaymentId);
-    const signatureMatches = hasSignature && generatedSignature === razorpaySignature;
-    const paymentVerified = !!razorpayPayment.verified;
 
-    console.log("[verify-donation-payment] verification status", {
+    console.log("[verify-donation-payment] signature check", {
+      donationId,
+      signaturePresent: hasSignature,
+      signatureFormatValid: hasSignature ? SIGNATURE_REGEX.test(razorpaySignature) : false,
+      signatureLength: hasSignature ? razorpaySignature.length : 0,
+    });
+
+    const razorpayPayment = await verifyPaymentWithRazorpay(razorpayKeyId, razorpayKeySecret, razorpayOrderId, razorpayPaymentId);
+    const verification = evaluateRazorpayVerification({
+      hasSignature,
+      razorpaySignature,
+      generatedSignature,
+      paymentStatus: razorpayPayment.status,
+      paymentOrderId: razorpayPayment.orderId,
+      expectedOrderId: razorpayOrderId,
+    });
+
+    console.log("[verify-donation-payment] payment lookup result", {
       donationId,
       userId: user.id,
       signaturePresent: hasSignature,
-      signatureMatches,
-      paymentVerified,
+      signatureMatches: verification.signatureMatches,
+      paymentVerified: verification.paymentVerified,
+      verificationPassed: verification.verificationPassed,
       razorpayStatus: razorpayPayment.status,
       razorpayOrderId: razorpayPayment.orderId,
       razorpayError: razorpayPayment.error,
     });
 
-    if (!paymentVerified && !signatureMatches) {
-      console.error("[verify-donation-payment] payment not verified by Razorpay and signature did not match", {
+    if (!verification.verificationPassed) {
+      const failureReason = verification.failureReason ?? "payment not verified by Razorpay";
+
+      console.error("[verify-donation-payment] verification failed", {
         donationId,
         userId: user.id,
+        failureReason,
         razorpayStatus: razorpayPayment.status,
+        razorpayOrderId: razorpayPayment.orderId,
         error: razorpayPayment.error,
       });
       await supabase
@@ -168,6 +205,13 @@ serve(async (req: Request) => {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    console.log("[verify-donation-payment] updating donation record", {
+      donationId,
+      userId: user.id,
+      paymentId: razorpayPaymentId,
+      status: "completed",
+    });
 
     const { data: donation, error: updateError } = await supabase
       .from("donations")
@@ -187,11 +231,24 @@ serve(async (req: Request) => {
       });
     }
 
+    console.log("[verify-donation-payment] database update complete", {
+      donationId: donation.id,
+      userId: user.id,
+      status: donation.status,
+      transactionId: donation.transaction_id,
+    });
+
+    console.log("[verify-donation-payment] response sent", {
+      donationId: donation.id,
+      success: true,
+      message: "Payment verified successfully",
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
         donationId: donation.id,
-        message: "Donation verified successfully",
+        message: "Payment verified successfully",
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );

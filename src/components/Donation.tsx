@@ -118,6 +118,11 @@ const Donation = () => {
         throw new Error("Failed to load payment gateway");
       }
 
+      console.log("[Donation] initiating donation order", {
+        amount,
+        tier: "custom",
+      });
+
       const { data: orderData, error: orderError } = await supabase.functions.invoke(
         "create-donation-order",
         {
@@ -127,6 +132,8 @@ const Donation = () => {
           },
         }
       );
+
+      console.log("[Donation] create-donation-order response", orderData);
 
       if (orderError) {
         throw new Error(orderError.message || "Failed to create donation order");
@@ -145,6 +152,8 @@ const Donation = () => {
         order_id: orderData.orderId,
         handler: async (response: any) => {
           try {
+            console.log("[Donation] Razorpay success response", response);
+
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
               "verify-donation-payment",
               {
@@ -157,8 +166,10 @@ const Donation = () => {
               }
             );
 
-            if (verifyError || verifyData?.error) {
-              throw new Error("Payment verification failed");
+            console.log("[Donation] verify-donation-payment response", verifyData);
+
+            if (verifyError || !verifyData?.success) {
+              throw new Error(verifyData?.error || "Payment verification failed");
             }
 
             toast.success("Thank you for your generous donation! 🙏");

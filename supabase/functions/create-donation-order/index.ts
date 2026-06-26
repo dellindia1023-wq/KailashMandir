@@ -47,6 +47,12 @@ serve(async (req: Request) => {
 
     const { amount, tier } = body as any;
 
+    console.log("[create-donation-order] request received", {
+      userId: user.id,
+      amount,
+      tier,
+    });
+
     let parsedAmount: number | null = null;
     if (typeof amount === "number" && Number.isFinite(amount)) {
       parsedAmount = amount;
@@ -77,6 +83,12 @@ serve(async (req: Request) => {
       });
     }
 
+    console.log("[create-donation-order] creating Razorpay order", {
+      userId: user.id,
+      amount: parsedAmount,
+      tier: safeTier,
+    });
+
     const razorpayResponse = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
       headers: {
@@ -105,6 +117,13 @@ serve(async (req: Request) => {
 
     const razorpayOrder = await razorpayResponse.json();
 
+    console.log("[create-donation-order] Razorpay order created", {
+      userId: user.id,
+      orderId: razorpayOrder.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+    });
+
     const { data: donation, error: donationError } = await supabase
       .from("donations")
       .insert({
@@ -124,6 +143,19 @@ serve(async (req: Request) => {
         status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    console.log("[create-donation-order] donation record created", {
+      userId: user.id,
+      donationId: donation.id,
+      status: donation.status,
+    });
+
+    console.log("[create-donation-order] response sent", {
+      orderId: razorpayOrder.id,
+      donationId: donation.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+    });
 
     return new Response(
       JSON.stringify({
