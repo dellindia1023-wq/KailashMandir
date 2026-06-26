@@ -195,11 +195,14 @@ serve(async (req: Request) => {
         razorpayOrderId: razorpayPayment.orderId,
         error: razorpayPayment.error,
       });
-      await supabase
-        .from("donations")
-        .update({ status: "failed" })
-        .eq("id", donationId)
-        .eq("user_id", user.id);
+      const { data: failResult, error: failError } = await supabase.rpc("fail_donation_payment", {
+        p_donation_id: donationId,
+        p_user_id: user.id,
+      });
+
+      if (failError || failResult !== true) {
+        console.error("[verify-donation-payment] RPC failure update error", { failError, failResult });
+      }
 
       return new Response(JSON.stringify({ error: "Payment verification failed" }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -213,29 +216,24 @@ serve(async (req: Request) => {
       status: "completed",
     });
 
-    const { data: donation, error: updateError } = await supabase
-      .from("donations")
-      .update({
-        status: "completed",
-        transaction_id: razorpayPaymentId,
-      })
-      .eq("id", donationId)
-      .eq("user_id", user.id)
-      .select()
-      .single();
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("complete_donation_payment", {
+      p_donation_id: donationId,
+      p_user_id: user.id,
+      p_payment_id: razorpayPaymentId,
+    });
 
-    if (updateError) {
-      console.error("Update error:", updateError);
+    if (rpcError || rpcResult !== true) {
+      console.error("[verify-donation-payment] RPC update error", { rpcError, rpcResult });
       return new Response(JSON.stringify({ error: "Failed to update donation" }), {
         status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
     console.log("[verify-donation-payment] database update complete", {
-      donationId: donation.id,
+      donationId,
       userId: user.id,
-      status: donation.status,
-      transactionId: donation.transaction_id,
+      paymentId: razorpayPaymentId,
+      status: "completed",
     });
 
     console.log("[verify-donation-payment] response sent", {

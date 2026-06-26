@@ -182,14 +182,14 @@ serve(async (req: Request) => {
         error: razorpayPayment.error,
       });
 
-      await supabase
-        .from("puja_bookings")
-        .update({
-          payment_status: "failed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", bookingId)
-        .eq("user_id", user.id);
+      const { data: failResult, error: failError } = await supabase.rpc("fail_booking_payment", {
+        p_booking_id: bookingId,
+        p_user_id: user.id,
+      });
+
+      if (failError || failResult !== true) {
+        console.error("[verify-razorpay-payment] RPC failure update error", { failError, failResult });
+      }
 
       return new Response(JSON.stringify({ error: "Payment verification failed" }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -216,30 +216,25 @@ serve(async (req: Request) => {
       console.error("[verify-razorpay-payment] booking probe threw", probeErr);
     }
 
-    const { data: booking, error: updateError } = await supabase
-      .from("puja_bookings")
-      .update({
-        payment_id: razorpayPaymentId,
-        razorpay_order_id: razorpayOrderId,
-        razorpay_signature: razorpaySignature,
-        payment_status: "paid",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", bookingId)
-      .eq("user_id", user.id)
-      .select()
-      .single();
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("complete_booking_payment", {
+      p_booking_id: bookingId,
+      p_user_id: user.id,
+      p_payment_id: razorpayPaymentId,
+      p_order_id: razorpayOrderId,
+      p_signature: razorpaySignature,
+    });
 
-    if (updateError) {
-      console.error("[verify-razorpay-payment] Update error", {
+    if (rpcError || rpcResult !== true) {
+      console.error("[verify-razorpay-payment] RPC update error", {
         bookingId,
         userId: user?.id,
-        updateError,
+        rpcError,
+        rpcResult,
       });
 
       return new Response(JSON.stringify({
         error: "Failed to update booking",
-        details: updateError,
+        details: rpcError,
         bookingId,
         userId: user?.id,
       }), {
