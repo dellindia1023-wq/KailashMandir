@@ -237,7 +237,7 @@ serve(async (req: Request) => {
     });
 
     console.log("[verify-donation-payment] response sent", {
-      donationId: donation.id,
+      donationId,
       success: true,
       message: "Payment verified successfully",
     });
@@ -245,7 +245,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        donationId: donation.id,
+        donationId,
         message: "Payment verified successfully",
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }

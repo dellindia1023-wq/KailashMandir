@@ -279,7 +279,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        bookingId: booking.id,
+        bookingId,
         message: "Payment verified successfully",
         email: emailStatus,
       }),
