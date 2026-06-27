@@ -715,3 +715,80 @@ export const buildKnowledgeContentMetadata = (content: {
     },
   };
 };
+
+export const analyzeContentQuality = (content: {
+  title?: string;
+  question?: string;
+  content?: string;
+  answer?: string;
+  excerpt?: string;
+  slug?: string;
+  baseUrl?: string;
+  category?: string;
+  type?: "blog" | "knowledge";
+  seo_title?: string;
+  seo_description?: string;
+  seo_keywords?: string;
+  seo_keywords_field?: string;
+}) => {
+  const titleText = content.title || content.question || "Temple article";
+  const contentText = content.content || content.answer || content.excerpt || "";
+  const excerptText = content.excerpt || "";
+  const plainText = toPlainText(`${titleText} ${contentText} ${excerptText}`);
+  const wordCount = plainText.split(/\s+/).filter(Boolean).length;
+  const readingTime = Math.max(1, Math.ceil(wordCount / 180));
+  const headingCount = Array.from((contentText || "").matchAll(/^(#{1,6})\s+(.+)$/gm)).length;
+  const imageCount = Array.from((contentText || "").matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)).length + Array.from((contentText || "").matchAll(/<img[^>]+src=["']([^"']+)["']/gi)).length;
+  const videoCount = Array.from((contentText || "").matchAll(/(youtube\.com|youtu\.be|\.mp4|\.webm|\.mov|\.m3u8)/gi)).length;
+  const linkMatches = Array.from((contentText || "").matchAll(/\[([^\]]+)\]\(([^)]+)\)/g));
+  const internalLinkCount = linkMatches.filter(([, , href]) => !href.startsWith("http") && !href.startsWith("mailto:") && !href.startsWith("tel:") && href !== "#").length;
+  const externalLinkCount = linkMatches.filter(([, , href]) => href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")).length;
+  const faqCount = (plainText.match(/\?/g) || []).length;
+  const hasTitle = Boolean(titleText?.trim());
+  const hasExcerpt = Boolean(excerptText?.trim());
+  const hasHeadings = headingCount > 0;
+  const hasMedia = imageCount > 0 || videoCount > 0;
+  const hasInternalLinks = internalLinkCount > 0;
+  const hasSeoFields = Boolean(content.seo_title?.trim() || content.seo_description?.trim() || content.seo_keywords?.trim() || content.seo_keywords_field?.trim());
+  const seoScore = Math.min(100, 35 + (hasTitle ? 15 : 0) + (hasExcerpt ? 15 : 0) + (wordCount > 120 ? 15 : wordCount > 60 ? 10 : 5) + (hasHeadings ? 10 : 0) + (hasSeoFields ? 10 : 0));
+  const geoScore = Math.min(100, 25 + (plainText.toLowerCase().includes("agra") || plainText.toLowerCase().includes("temple") || plainText.toLowerCase().includes("kailash") ? 25 : 0) + (hasHeadings ? 10 : 0) + (hasMedia ? 10 : 0) + (hasInternalLinks ? 10 : 0));
+  const aeoScore = Math.min(100, 30 + (faqCount > 0 ? 20 : 0) + (hasHeadings ? 15 : 0) + (hasInternalLinks ? 15 : 0) + (hasMedia ? 10 : 0) + (wordCount > 80 ? 10 : 0));
+  const metadata = buildContentAutomationMetadata({
+    title: content.title,
+    question: content.question,
+    content: content.content,
+    answer: content.answer,
+    excerpt: content.excerpt,
+    slug: content.slug,
+    baseUrl: content.baseUrl,
+    category: content.category,
+    type: content.type,
+  });
+  const slugPreview = content.type === "knowledge"
+    ? `${content.baseUrl || "https://kailashmahadev.in"}/knowledge-hub#${content.slug || titleText.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-")}`
+    : `${content.baseUrl || "https://kailashmahadev.in"}/blog/${content.slug || titleText.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-")}`;
+  const canonicalPreview = metadata.canonical_url;
+  const metaPreview = metadata.seo_description;
+  const openGraphPreview = `${metadata.open_graph.title}\n${metadata.open_graph.description}`;
+  const twitterPreview = `${metadata.twitter_card.title}\n${metadata.twitter_card.description}`;
+
+  return {
+    wordCount,
+    readingTime,
+    headingCount,
+    imageCount,
+    videoCount,
+    internalLinkCount,
+    externalLinkCount,
+    faqCount,
+    schemaStatus: hasTitle && hasExcerpt && wordCount > 0 ? "Ready" : "Needs more content",
+    seoScore,
+    geoScore,
+    aeoScore,
+    slugPreview,
+    canonicalPreview,
+    metaPreview,
+    openGraphPreview,
+    twitterPreview,
+  };
+};

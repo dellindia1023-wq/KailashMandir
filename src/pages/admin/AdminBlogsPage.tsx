@@ -1,4 +1,4 @@
-import { AdminBlogs } from "@/components/admin/AdminBlogs";
+import { AdminBlogManagement } from "@/components/admin/AdminBlogManagement";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
 
@@ -21,7 +21,7 @@ export default function AdminBlogsPage() {
       {/* Main Content Card */}
       <Card className="border-border/50">
         <CardContent className="p-6">
-          <AdminBlogs />
+          <AdminBlogManagement />
         </CardContent>
       </Card>
     </div>

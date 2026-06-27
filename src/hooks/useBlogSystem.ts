@@ -10,7 +10,7 @@ export interface BlogCategory {
   slug: string;
   description?: string;
   icon?: string;
-  display_order: number;
+  display_order?: number;
   created_at: string;
   created_by?: string;
 }
@@ -69,15 +69,64 @@ export const useBlogCategories = () => {
   return useQuery({
     queryKey: ["blog-categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blog_categories")
-        .select("*")
-        .order("display_order", { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from("blog_categories")
+          .select("*")
+          .order("name", { ascending: true });
 
-      if (error) throw error;
-      return data as BlogCategory[];
+        if (error) {
+          console.error("Failed to fetch blog categories:", error.message);
+          return [] as BlogCategory[];
+        }
+
+        return (data as BlogCategory[]) || [];
+      } catch (err: any) {
+        console.error("Exception fetching blog categories:", err.message);
+        return [] as BlogCategory[];
+      }
     },
   });
+};
+
+export const initializeBlogCategories = async (): Promise<boolean> => {
+  try {
+    const { data: existing, error: existingError } = await supabase
+      .from("blog_categories")
+      .select("id")
+      .limit(1);
+
+    if (existingError) {
+      console.warn("Failed to check existing blog categories:", existingError.message);
+      return false;
+    }
+
+    if (!existing || existing.length === 0) {
+      const defaultCategories = [
+        { name: "Spiritual Insights", slug: "spiritual-insights", description: "Spiritual teachings and wisdom" },
+        { name: "Temple Updates", slug: "temple-updates", description: "News and updates from the temple" },
+        { name: "Rituals & Traditions", slug: "rituals-traditions", description: "Information about temple rituals" },
+        { name: "Events", slug: "events", description: "Upcoming events and celebrations" },
+      ];
+
+      const { error: insertError } = await supabase
+        .from("blog_categories")
+        .insert(defaultCategories);
+
+      if (insertError) {
+        console.warn("Failed to insert default blog categories:", insertError.message);
+        return false;
+      }
+
+      console.log("Default blog categories initialized");
+      return true;
+    }
+
+    return false;
+  } catch (err: any) {
+    console.warn("Error initializing blog categories:", err.message);
+    return false;
+  }
 };
 
 export const useCreateBlogCategory = () => {
@@ -130,8 +179,7 @@ export const useBlogs = (isAdmin: boolean = false) => {
         .select(
           `
           *,
-          category:blog_categories(id, name, slug),
-          blog_blog_tags(tag:blog_tags(id, name, slug))
+          category:blog_categories(id, name, slug)
           `
         );
 
@@ -179,8 +227,7 @@ export const useBlogBySlug = (slug: string) => {
         .select(
           `
           *,
-          category:blog_categories(id, name, slug),
-          blog_blog_tags(tag:blog_tags(id, name, slug))
+          category:blog_categories(id, name, slug)
           `
         )
         .eq("slug", slug)
@@ -247,7 +294,6 @@ export const useCreateBlog = () => {
         seo_title: blog.seo_title?.trim() || automationMetadata.seo_title,
         seo_description: blog.seo_description?.trim() || automationMetadata.seo_description,
         seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
-        canonical_url: (blog as Blog).canonical_url?.trim() || automationMetadata.canonical_url,
       };
       
       const { data, error } = await supabase
@@ -290,7 +336,6 @@ export const useUpdateBlog = () => {
         seo_title: blog.seo_title?.trim() || automationMetadata.seo_title,
         seo_description: blog.seo_description?.trim() || automationMetadata.seo_description,
         seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
-        canonical_url: blog.canonical_url?.trim() || automationMetadata.canonical_url,
       };
       
       const { data, error } = await supabase

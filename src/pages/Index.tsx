@@ -464,7 +464,7 @@ const Index = () => {
                         <CardContent className="p-4 md:p-5 flex flex-col h-full">
                           <div className="mb-2">
                             <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-                              {blog.category_id || "Insights"}
+                              {blog.category?.name || blog.category_id || "Insights"}
                             </Badge>
                           </div>
                           <h3 className="font-heading font-semibold text-foreground text-base md:text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors">
@@ -505,7 +505,7 @@ const Index = () => {
                           <CardContent className="p-3 flex flex-col justify-between flex-grow">
                             <div>
                               <Badge className="bg-primary/10 text-primary border-primary/20 text-xs mb-1">
-                                {blog.category_id || "Insights"}
+                                {blog.category?.name || blog.category_id || "Insights"}
                               </Badge>
                               <h3 className="font-heading font-semibold text-foreground text-sm line-clamp-2 group-hover:text-primary transition-colors">
                                 {blog.title}

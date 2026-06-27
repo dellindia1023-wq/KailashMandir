@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autoGenerateBlogSEO, autoGenerateKnowledgeSEO, buildBlogContentMetadata, buildKnowledgeContentMetadata, buildContentAutomationMetadata } from "@/lib/contentSeo";
+import { autoGenerateBlogSEO, autoGenerateKnowledgeSEO, buildBlogContentMetadata, buildKnowledgeContentMetadata, buildContentAutomationMetadata, analyzeContentQuality } from "@/lib/contentSeo";
 
 describe("content SEO helpers", () => {
   it("creates fallback SEO metadata for blogs", () => {
@@ -89,5 +89,27 @@ describe("content SEO helpers", () => {
     expect(metadata.twitter_card.card).toBe("summary_large_image");
     expect(metadata.image_metadata.alt_text).toContain("Shivaratri");
     expect(metadata.schema.article["@type"]).toBe("Article");
+  });
+
+  it("analyzes content quality and SEO readiness for the editor panel", () => {
+    const analysis = analyzeContentQuality({
+      title: "Aarti Timings",
+      content: "## Morning Aarti\n\nThe temple begins at dawn.\n\n![Temple](https://example.com/temple.jpg \"Temple\")\n\nSee [Darshan timings](/darshan-timings) and [Puja booking](/pujas).",
+      excerpt: "A brief guide to aarti timing.",
+      slug: "aarti-timings",
+      baseUrl: "https://kailashmahadev.in",
+      type: "blog",
+    } as any);
+
+    expect(analysis.wordCount).toBeGreaterThan(0);
+    expect(analysis.readingTime).toBeGreaterThan(0);
+    expect(analysis.headingCount).toBe(1);
+    expect(analysis.imageCount).toBe(1);
+    expect(analysis.internalLinkCount).toBe(2);
+    expect(analysis.seoScore).toBeGreaterThan(0);
+    expect(analysis.geoScore).toBeGreaterThan(0);
+    expect(analysis.aeoScore).toBeGreaterThan(0);
+    expect(analysis.slugPreview).toContain("aarti-timings");
+    expect(analysis.canonicalPreview).toContain("/blog/aarti-timings");
   });
 });

@@ -28,8 +28,11 @@ export interface Blog {
   content: string;
   excerpt?: string;
   featured_image_url?: string;
+  featured_video_url?: string;
+  featured_image_caption?: string;
+  image_alt?: string;
   category_id?: string;
-  status: "draft" | "published";
+  status: "draft" | "published" | "archived";
   is_featured: boolean;
   seo_title?: string;
   seo_description?: string;
@@ -40,6 +43,7 @@ export interface Blog {
   published_at?: string;
   created_by?: string;
   tags?: BlogTag[];
+  category?: BlogCategory;
 }
 
 export interface KnowledgeArticle {
@@ -51,6 +55,9 @@ export interface KnowledgeArticle {
   seo_title?: string;
   seo_description?: string;
   seo_keywords_field?: string;
+  featured_image_url?: string;
+  featured_video_url?: string;
+  image_alt?: string;
   is_featured: boolean;
   view_count: number;
   created_at: string;
@@ -143,9 +150,7 @@ export const useBlogs = (status?: "draft" | "published") => {
     queryFn: async () => {
       let query = supabase
         .from("blogs")
-        .select("*")
-        .order("created_at", { ascending: false });
-
+        .select("*, category:blog_categories(id, name, slug)")
       if (status) {
         query = query.eq("status", status);
       }
@@ -164,7 +169,7 @@ export const useBlogBySlug = (slug: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("blogs")
-        .select(`*, blog_tag_relationships(tag_id)`)
+        .select(`*, category:blog_categories(id, name, slug), blog_tag_relationships(tag_id)`)
         .eq("slug", slug)
         .eq("status", "published")
         .single();
@@ -205,7 +210,6 @@ export const useCreateBlog = () => {
         seo_title: blog.seo_title?.trim() || automationMetadata.seo_title,
         seo_description: blog.seo_description?.trim() || automationMetadata.seo_description,
         seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
-        canonical_url: blog.canonical_url?.trim() || automationMetadata.canonical_url,
       };
       const { data, error } = await supabase
         .from("blogs")
@@ -249,7 +253,6 @@ export const useUpdateBlog = () => {
         seo_title: blog.seo_title?.trim() || automationMetadata.seo_title,
         seo_description: blog.seo_description?.trim() || automationMetadata.seo_description,
         seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
-        canonical_url: blog.canonical_url?.trim() || automationMetadata.canonical_url,
       };
       const { data, error } = await supabase
         .from("blogs")

@@ -37,7 +37,7 @@ export default function BlogPage() {
     "@type": "CollectionPage",
     name: "Blog & Articles - Kailash Mahadev Temple Agra",
     description: "Explore spiritual wisdom, temple news, and insights from Kailash Mahadev Temple Agra",
-    url: `${BASE_URL}/blog`,
+    url: `${BASE_URL}/blogs`,
     mainEntity: {
       "@type": "BlogPosting",
       headline: "Kailash Mahadev Temple Blog",
@@ -69,7 +69,7 @@ export default function BlogPage() {
         "@type": "ListItem",
         position: 2,
         name: "Blog",
-        item: `${BASE_URL}/blog`,
+        item: `${BASE_URL}/blogs`,
       },
     ],
   };
@@ -80,7 +80,7 @@ export default function BlogPage() {
         title="Blog & Articles - Kailash Mahadev Temple Agra | Spiritual Wisdom"
         description="Discover spiritual wisdom, temple history, and religious insights from Kailash Mahadev Temple Agra. Read articles about Hindu traditions, temple events, and spiritual guidance."
         keywords="Kailash Mahadev blog, Agra temple articles, spiritual wisdom, Hindu temple news, temple stories, religious insights"
-        canonical={`${BASE_URL}/blog`}
+        canonical={`${BASE_URL}/blogs`}
         jsonLd={[blogListingSchema, breadcrumbSchema]}
       />
       <Header />
@@ -188,6 +188,7 @@ export default function BlogPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline">{blog.status}</Badge>
+                        {blog.category?.name && <Badge variant="secondary">{blog.category.name}</Badge>}
                         {blog.is_featured && <Badge>Featured</Badge>}
                       </div>
                       <h3 className="text-lg font-semibold mb-2 line-clamp-2">

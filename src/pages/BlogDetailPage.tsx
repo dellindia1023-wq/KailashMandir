@@ -126,13 +126,13 @@ export default function BlogDetailPage() {
         "@type": "ListItem",
         position: 2,
         name: "Blogs",
-        item: `${BASE_URL}/blog`,
+        item: `${BASE_URL}/blogs`,
       },
       {
         "@type": "ListItem",
         position: 3,
-        name: blog.category_id ? "Category" : "Blog",
-        item: blog.category_id ? `${BASE_URL}/blog?category=${blog.category_id}` : `${BASE_URL}/blog`,
+        name: blog.category_id ? "Category" : "Blogs",
+        item: blog.category_id ? `${BASE_URL}/blogs?category=${blog.category_id}` : `${BASE_URL}/blogs`,
       },
       {
         "@type": "ListItem",
