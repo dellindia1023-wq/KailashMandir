@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AartiTiming {
@@ -12,111 +13,47 @@ export interface AartiTiming {
   is_active: boolean;
 }
 
-// Default aarti timings if database fetch fails
-const DEFAULT_AARTI_TIMINGS: AartiTiming[] = [
-  {
-    id: "default-1",
-    name: "Mangla Aarti",
-    start_time: "04:00",
-    end_time: "04:30",
-    description: "Early morning worship",
-    is_special: true,
-    order: 1,
-    is_active: true,
-  },
-  {
-    id: "default-2",
-    name: "Shringar Darshan",
-    start_time: "05:00",
-    end_time: "06:30",
-    description: "Preparation and decoration",
-    is_special: false,
-    order: 2,
-    is_active: true,
-  },
-  {
-    id: "default-3",
-    name: "Bhog Aarti",
-    start_time: "07:30",
-    end_time: "08:00",
-    description: "Mid-morning prayer",
-    is_special: false,
-    order: 3,
-    is_active: true,
-  },
-  {
-    id: "default-4",
-    name: "Raj Bhog Aarti",
-    start_time: "12:00",
-    end_time: "12:30",
-    description: "Afternoon blessed offering",
-    is_special: false,
-    order: 4,
-    is_active: true,
-  },
-  {
-    id: "default-5",
-    name: "Evening Darshan",
-    start_time: "16:00",
-    end_time: "19:00",
-    description: "Evening prayer and darshan",
-    is_special: false,
-    order: 5,
-    is_active: true,
-  },
-  {
-    id: "default-6",
-    name: "Sandhya Aarti",
-    start_time: "19:30",
-    end_time: "20:00",
-    description: "Twilight worship",
-    is_special: true,
-    order: 6,
-    is_active: true,
-  },
-  {
-    id: "default-7",
-    name: "Shayan Aarti",
-    start_time: "21:00",
-    end_time: "21:30",
-    description: "Night prayer before rest",
-    is_special: false,
-    order: 7,
-    is_active: true,
-  },
-];
-
 export function useAartiTimings(activeOnly = false) {
-  return useQuery({
-    queryKey: ["aarti-timings", activeOnly],
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ["aarti-timings", activeOnly] as const, [activeOnly]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("aarti-timings")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "aarti_schedule" },
+        () => {
+          queryClient.invalidateQueries(queryKey, { exact: true });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, queryKey]);
+
+  return useQuery<AartiTiming[]>({
+    queryKey,
     queryFn: async () => {
-      try {
-        const query = supabase
-          .from("aarti_schedule")
-          .select("*")
-          .order("order", { ascending: true });
+      const query = supabase
+        .from("aarti_schedule")
+        .select("*")
+        .order("order", { ascending: true });
 
-        if (activeOnly) {
-          query.eq("is_active", true);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error("Error fetching aarti timings:", error);
-          return DEFAULT_AARTI_TIMINGS.filter((t) => !activeOnly || t.is_active);
-        }
-
-        // If no data from database, return defaults
-        if (!data || data.length === 0) {
-          return DEFAULT_AARTI_TIMINGS.filter((t) => !activeOnly || t.is_active);
-        }
-
-        return data as AartiTiming[];
-      } catch (error) {
-        console.error("Error fetching aarti timings:", error);
-        return DEFAULT_AARTI_TIMINGS.filter((t) => !activeOnly || t.is_active);
+      if (activeOnly) {
+        query.eq("is_active", true);
       }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching aarti timings:", error);
+        return [];
+      }
+
+      return (data || []) as AartiTiming[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 15 * 60 * 1000, // 15 minutes

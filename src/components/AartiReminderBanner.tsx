@@ -1,16 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Bell, BellRing, X, Flame } from "lucide-react";
 import { isAartiEnabled } from "@/hooks/useAartiNotificationPrefs";
+import { useAartiTimings, timeToMinutes, formatTime } from "@/hooks/useAartiTimings";
 import { Link } from "react-router-dom";
-
-const AARTI_SCHEDULE = [
-  { name: "Mangla Aarti", hour: 4, minute: 0 },
-  { name: "Shringar Darshan", hour: 5, minute: 0 },
-  { name: "Bhog Aarti", hour: 7, minute: 30 },
-  { name: "Raj Bhog Aarti", hour: 12, minute: 0 },
-  { name: "Sandhya Aarti", hour: 19, minute: 30 },
-  { name: "Shayan Aarti", hour: 21, minute: 0 },
-];
 
 const REMINDER_MINUTES = 15;
 
@@ -20,21 +12,17 @@ const getIST = () => {
   return new Date(utc + 5.5 * 3600000);
 };
 
-const formatTime = (hour: number, minute: number) => {
-  const period = hour >= 12 ? "PM" : "AM";
-  const h = hour % 12 || 12;
-  return `${h}:${String(minute).padStart(2, "0")} ${period}`;
-};
-
-const getUpcomingAarti = () => {
+const getUpcomingAarti = (aartiTimings: Array<{ name: string; start_time: string }>) => {
+  if (aartiTimings.length === 0) return null;
   const ist = getIST();
   const nowMinutes = ist.getHours() * 60 + ist.getMinutes();
 
-  for (const a of AARTI_SCHEDULE) {
-    const aartiMinutes = a.hour * 60 + a.minute;
+  for (const a of aartiTimings) {
+    if (!isAartiEnabled(a.name)) continue;
+    const aartiMinutes = timeToMinutes(a.start_time);
     const diff = aartiMinutes - nowMinutes;
-    if (diff > 0 && diff <= REMINDER_MINUTES && isAartiEnabled(a.name)) {
-      return { name: a.name, minutesLeft: diff, time: formatTime(a.hour, a.minute) };
+    if (diff > 0 && diff <= REMINDER_MINUTES) {
+      return { name: a.name, minutesLeft: diff, time: formatTime(a.start_time) };
     }
   }
   return null;
@@ -58,7 +46,8 @@ const sendBrowserNotification = (name: string, time: string, minutesLeft: number
 };
 
 const AartiReminderBanner = () => {
-  const [reminder, setReminder] = useState(getUpcomingAarti);
+  const { data: aartiTimings = [] } = useAartiTimings(true);
+  const [reminder, setReminder] = useState<{ name: string; minutesLeft: number; time: string } | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">(
     "Notification" in window ? Notification.permission : "unsupported"
@@ -88,7 +77,10 @@ const AartiReminderBanner = () => {
 
     // Web Audio API chime
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      type AudioCtor = new () => AudioContext;
+      const AudioClass = (window.AudioContext || (window as Window & { webkitAudioContext?: AudioCtor }).webkitAudioContext) as AudioCtor | undefined;
+      if (!AudioClass) throw new Error("AudioContext unavailable");
+      const ctx = new AudioClass();
       const playTone = (freq: number, startTime: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -114,8 +106,8 @@ const AartiReminderBanner = () => {
   };
 
   useEffect(() => {
-    const id = setInterval(() => {
-      const next = getUpcomingAarti();
+    const updateReminder = () => {
+      const next = getUpcomingAarti(aartiTimings || []);
       if (next && next.name !== dismissed) {
         setReminder(next);
         alertUser(next.name, next.time, next.minutesLeft);
@@ -125,14 +117,12 @@ const AartiReminderBanner = () => {
         lastAlertedRef.current = null;
         lastNotifiedRef.current = null;
       }
-    }, 10000);
-    return () => clearInterval(id);
-  }, [dismissed]);
+    };
 
-  // Alert on initial mount if reminder exists
-  useEffect(() => {
-    if (reminder) alertUser(reminder.name, reminder.time, reminder.minutesLeft);
-  }, []);
+    updateReminder();
+    const id = setInterval(updateReminder, 10000);
+    return () => clearInterval(id);
+  }, [aartiTimings, dismissed]);
 
   const handleDismiss = () => {
     if (reminder) setDismissed(reminder.name);

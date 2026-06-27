@@ -18,6 +18,7 @@ import {
   Flame, Sparkles, Eye, BookMarked,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAartiTimings, formatTime, timeToMinutes } from "@/hooks/useAartiTimings";
 import templeHero from "@/assets/gallery/devotees-prayer.jpg";
 import shivaLingam from "@/assets/gallery/shivling-chandan.jpg";
 import aartiCeremony from "@/assets/gallery/shivling-shringar-1.jpg";
@@ -141,15 +142,30 @@ const sections = [
   { title: "Contact Us", description: "Get in touch & directions", icon: Phone, href: "/contact", color: "text-primary", bg: "bg-primary/10", borderColor: "border-primary/20" },
 ];
 
-/* ─── Today's Aarti Schedule ─── */
-const aartiSchedule = [
-  { name: "Mangla Aarti", time: "4:00 AM", icon: Moon, special: true },
-  { name: "Shringar Darshan", time: "5:00 AM", icon: Sunrise, special: false },
-  { name: "Bhog Aarti", time: "7:30 AM", icon: Sun, special: false },
-  { name: "Raj Bhog Aarti", time: "12:00 PM", icon: Sun, special: false },
-  { name: "Sandhya Aarti", time: "7:30 PM", icon: Sunset, special: true },
-  { name: "Shayan Aarti", time: "9:00 PM", icon: Moon, special: false },
-];
+const getIST = () => {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + 5.5 * 3600000);
+};
+
+const getAartiStatus = (startTime: string, endTime: string) => {
+  const now = getIST();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const start = timeToMinutes(startTime);
+  const end = timeToMinutes(endTime);
+
+  if (currentMinutes >= start && currentMinutes < end) return "Live";
+  if (currentMinutes < start) return "Upcoming";
+  return "Closed";
+};
+
+const getIconForAarti = (name: string) => {
+  const nameLower = name.toLowerCase();
+  if (nameLower.includes("mangla") || nameLower.includes("shayan")) return Moon;
+  if (nameLower.includes("shringar")) return Sunrise;
+  if (nameLower.includes("evening") || nameLower.includes("sandhya")) return Sunset;
+  return Sun;
+};
 
 /* ─── Featured Pujas ─── */
 const featuredPujas = [
@@ -193,9 +209,10 @@ const Index = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [testimonialDirection, setTestimonialDirection] = useState<"left" | "right">("right");
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<{ id: string; event_name: string; start_date: string; end_date: string; image_url: string | null; location: string | null }[]>([]);
   const { t } = useLanguage();
   const { data: blogs = [] } = useBlogs("published");
+  const { data: aartiSchedule = [], isLoading: isAartiLoading } = useAartiTimings(true);
 
   const counter1 = useCountUp(500);
   const counter2 = useCountUp(10000);
@@ -216,7 +233,7 @@ const Index = () => {
 
   // Staggered reveals
   const navStagger = useStaggerReveal(sections.length);
-  const aartiStagger = useStaggerReveal(aartiSchedule.length);
+  const aartiStagger = useStaggerReveal(Math.max(aartiSchedule.length, 4));
   const pujaStagger = useStaggerReveal(featuredPujas.length);
   const galleryStagger = useStaggerReveal(galleryImages.length);
   const blogStagger = useStaggerReveal(Math.min(blogs.length, 3));
@@ -237,14 +254,7 @@ const Index = () => {
   }, []);
 
   // Auto-rotate testimonials with smooth transition
-  useEffect(() => {
-    const timer = setInterval(() => {
-      changeTestimonial("right");
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const changeTestimonial = (direction: "left" | "right") => {
+  const changeTestimonial = useCallback((direction: "left" | "right") => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     setTestimonialDirection(direction);
@@ -256,7 +266,14 @@ const Index = () => {
       );
       setIsTransitioning(false);
     }, 300);
-  };
+  }, [isTransitioning]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      changeTestimonial("right");
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [changeTestimonial]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -407,7 +424,7 @@ const Index = () => {
         {/* ═══ Blog & Insights — Featured Posts ═══ */}
         {blogs.length > 0 && (
           <>
-            <section ref={blogStagger.ref} className={`py-10 md:py-20 bg-background ${blogStagger.className}`}>
+            <section ref={revealTestimonials.ref} className={`py-10 md:py-20 bg-background ${revealTestimonials.className}`}>
               <div className="container mx-auto px-4">
                 <div className="text-center mb-8 md:mb-12">
                   <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">
@@ -447,7 +464,7 @@ const Index = () => {
                         <CardContent className="p-4 md:p-5 flex flex-col h-full">
                           <div className="mb-2">
                             <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-                              {blog.category?.name || "Insights"}
+                              {blog.category_id || "Insights"}
                             </Badge>
                           </div>
                           <h3 className="font-heading font-semibold text-foreground text-base md:text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors">
@@ -488,7 +505,7 @@ const Index = () => {
                           <CardContent className="p-3 flex flex-col justify-between flex-grow">
                             <div>
                               <Badge className="bg-primary/10 text-primary border-primary/20 text-xs mb-1">
-                                {blog.category?.name || "Insights"}
+                                {blog.category_id || "Insights"}
                               </Badge>
                               <h3 className="font-heading font-semibold text-foreground text-sm line-clamp-2 group-hover:text-primary transition-colors">
                                 {blog.title}
@@ -538,31 +555,79 @@ const Index = () => {
               </p>
             </div>
             <div ref={aartiStagger.ref} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 max-w-5xl mx-auto">
-              {aartiSchedule.map((aarti, i) => (
-                <Card
-                  key={aarti.name}
-                  className={`text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-lg ${aarti.special ? "border-gold bg-gold/5 animate-pulse-border" : ""} ${
-                    aartiStagger.visibleItems[i]
-                      ? "opacity-100 translate-y-0"
-                      : "opacity-0 translate-y-6"
-                  }`}
-                  style={{ transitionDelay: `${i * 80}ms` }}
-                >
-                  <CardContent className="p-4 md:p-5">
-                    <div className={`w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${aarti.special ? "bg-gold/20 text-gold animate-diya-glow" : "bg-primary/10 text-primary"}`}>
-                      <aarti.icon className="h-5 w-5" />
-                    </div>
-                    <h4 className="font-heading text-xs md:text-sm font-semibold text-foreground leading-tight">{aarti.name}</h4>
-                    <p className={`text-xs md:text-sm font-semibold mt-1 ${aarti.special ? "text-gold" : "text-primary"}`}>{aarti.time}</p>
-                    {aarti.special && (
-                      <Badge className="mt-2 bg-gold/20 text-gold border-gold/30 text-[10px] px-1.5">
-                        <Sparkles className="h-2.5 w-2.5 mr-0.5" />
-                        Special
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+              {isAartiLoading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <Card
+                      key={`skeleton-${i}`}
+                      className={`animate-pulse border-border bg-muted/60 ${
+                        aartiStagger.visibleItems[i] ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                      }`}
+                      style={{ transitionDelay: `${i * 80}ms` }}
+                    >
+                      <CardContent className="p-4 md:p-5 h-28" />
+                    </Card>
+                  ))
+                : aartiSchedule.length > 0
+                ? aartiSchedule.map((aarti, i) => {
+                    const status = getAartiStatus(aarti.start_time, aarti.end_time);
+                    const Icon = getIconForAarti(aarti.name);
+                    return (
+                      <Card
+                        key={aarti.id}
+                        className={`text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-lg ${
+                          status === "Live"
+                            ? "border-destructive bg-destructive/10"
+                            : aarti.is_special
+                            ? "border-gold bg-gold/5 animate-pulse-border"
+                            : "border-border bg-card"
+                        } ${
+                          aartiStagger.visibleItems[i] ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                        }`}
+                        style={{ transitionDelay: `${i * 80}ms` }}
+                      >
+                        <CardContent className="p-4 md:p-5">
+                          <div className={`w-11 h-11 rounded-full mx-auto mb-3 flex items-center justify-center transition-all duration-300 ${
+                            aarti.is_special ? "bg-gold/20 text-gold" : "bg-primary/10 text-primary"
+                          }`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              <Badge className={`text-[10px] px-2 py-1 ${
+                                status === "Live"
+                                  ? "bg-destructive text-destructive-foreground"
+                                  : status === "Upcoming"
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-muted text-muted-foreground"
+                              }`}>
+                                {status}
+                              </Badge>
+                              {aarti.is_special && (
+                                <Badge className="bg-gold/20 text-gold border-gold/30 text-[10px] px-2 py-1">
+                                  <Sparkles className="h-3 w-3 mr-1 inline" />
+                                  Special
+                                </Badge>
+                              )}
+                            </div>
+                            <h4 className="font-heading text-xs md:text-sm font-semibold text-foreground leading-tight">{aarti.name}</h4>
+                            <p className="text-xs md:text-sm font-semibold mt-0.5 text-primary">
+                              {formatTime(aarti.start_time)} - {formatTime(aarti.end_time)}
+                            </p>
+                            {aarti.description && (
+                              <p className="text-[11px] text-muted-foreground leading-snug max-w-[10rem] mx-auto">
+                                {aarti.description}
+                              </p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                : (
+                  <div className="col-span-full rounded-3xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                    No active aarti timings are available right now. Please check the full schedule page for the latest timing updates.
+                  </div>
+                )}
             </div>
             <div className="text-center mt-6">
               <Link to="/darshan-timings">

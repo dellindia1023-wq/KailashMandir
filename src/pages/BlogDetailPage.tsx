@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import SEOHead from "@/components/SEOHead";
 import { BASE_URL } from "@/constants/seo";
 import { buildBlogContentMetadata, buildContentAutomationMetadata } from "@/lib/contentSeo";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 export default function BlogDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -342,9 +343,7 @@ export default function BlogDetailPage() {
 
           {/* Blog Content */}
           <div className="prose prose-invert max-w-none mb-12">
-            <div className="whitespace-pre-wrap text-lg leading-relaxed text-foreground">
-              {blog.content}
-            </div>
+            <MarkdownContent content={blog.content} />
           </div>
 
           {/* Related Articles */}

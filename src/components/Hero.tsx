@@ -7,6 +7,24 @@ import { supabase } from "@/integrations/supabase/client";
 
 const INTERVAL = 5000;
 
+type HeroMediaItem = {
+  url: string;
+  alt?: string;
+  media_type?: "image" | "video";
+  title?: string;
+  subtitle?: string;
+  button_text?: string;
+  button_link?: string;
+  display_order?: number;
+  active?: boolean;
+};
+
+const getMediaTypeFromUrl = (url: string): "image" | "video" => {
+  const extension = url.split(".").pop()?.split(/[#?]/)[0]?.toLowerCase();
+  if (extension === "mp4" || extension === "webm") return "video";
+  return "image";
+};
+
 const Hero = () => {
   const { t } = useLanguage();
   const [current, setCurrent] = useState(0);
@@ -23,7 +41,13 @@ const Hero = () => {
     daily_devotees: 5000,
     days_open: 365,
   });
-  const [slides, setSlides] = useState<Array<{ url: string; alt: string }>>([]);
+  const [slides, setSlides] = useState<HeroMediaItem[]>([]);
+
+  const currentSlide = slides[current];
+  const heroTitle = currentSlide?.title || settings.hero_title || t("hero.templeName");
+  const heroSubtitle = currentSlide?.subtitle || settings.hero_subtitle || t("hero.templeLocation");
+  const heroButtonText = currentSlide?.button_text || settings.hero_button_text;
+  const heroButtonLink = currentSlide?.button_link || settings.hero_button_link;
 
   useEffect(() => {
     fetchHomepageSettings();
@@ -52,9 +76,38 @@ const Hero = () => {
           daily_devotees: data.daily_devotees || 5000,
           days_open: data.days_open || 365,
         });
+
+        const items: HeroMediaItem[] = [];
         if (data.hero_images && Array.isArray(data.hero_images) && data.hero_images.length > 0) {
-          console.log("Hero images loaded:", data.hero_images);
-          setSlides(data.hero_images);
+          for (const item of data.hero_images) {
+            if (!item || !item.url) continue;
+            const mediaType = item.media_type || getMediaTypeFromUrl(item.url);
+            items.push({
+              url: item.url,
+              alt: item.alt || "Hero media",
+              media_type: mediaType,
+              title: item.title,
+              subtitle: item.subtitle,
+              button_text: item.button_text,
+              button_link: item.button_link,
+              display_order: item.display_order,
+              active: item.active !== false,
+            });
+          }
+        } else if (data.hero_image_url) {
+          items.push({
+            url: data.hero_image_url,
+            alt: "Hero image",
+            media_type: getMediaTypeFromUrl(data.hero_image_url),
+            active: true,
+          });
+        }
+
+        if (items.length > 0) {
+          const activeItems = items
+            .filter((item) => item.active !== false)
+            .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+          setSlides(activeItems.length > 0 ? activeItems : items);
           setCurrent(0);
         }
       }
@@ -80,7 +133,11 @@ const Hero = () => {
     if (touchStart === null) return;
     const diff = touchStart - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 50) {
-      diff > 0 ? next() : prev();
+      if (diff > 0) {
+        next();
+      } else {
+        prev();
+      }
     }
     setTouchStart(null);
     setIsPaused(false);
@@ -101,29 +158,41 @@ const Hero = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Hero carousel images */}
+      {/* Hero carousel media */}
       {slides.length > 0 && slides.map((slide, i) => (
         <div
           key={`slide-${i}`}
           className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
-          style={{ 
+          style={{
             opacity: i === current ? 1 : 0,
-            pointerEvents: i === current ? 'auto' : 'none'
+            pointerEvents: i === current ? "auto" : "none",
           }}
         >
-          <img
-            src={slide.url}
-            alt={slide.alt || "Hero banner"}
-            className="w-full h-full object-cover"
-            width={1920}
-            height={1080}
-            decoding="async"
-            loading={i === 0 ? "eager" : "lazy"}
-            onError={(e) => {
-              console.error(`Failed to load image ${i}:`, slide.url);
-              e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Crect fill='%23333' width='1920' height='1080'/%3E%3C/svg%3E";
-            }}
-          />
+          {slide.media_type === "video" ? (
+            <video
+              src={slide.url}
+              className="w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload={i === 0 ? "auto" : "metadata"}
+            />
+          ) : (
+            <img
+              src={slide.url}
+              alt={slide.alt || "Hero banner"}
+              className="w-full h-full object-cover"
+              width={1920}
+              height={1080}
+              decoding="async"
+              loading={i === 0 ? "eager" : "lazy"}
+              onError={(e) => {
+                console.error(`Failed to load image ${i}:`, slide.url);
+                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Crect fill='%23333' width='1920' height='1080'/%3E%3C/svg%3E";
+              }}
+            />
+          )}
         </div>
       ))}
 
@@ -211,11 +280,9 @@ const Hero = () => {
             className="font-heading text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary-foreground mb-4 md:mb-6 animate-fade-in"
             style={{ animationDelay: "0.2s" }}
           >
-            {settings.hero_title || t("hero.templeName")}
-            {settings.hero_subtitle ? (
-              <span className="block animate-text-shimmer text-2xl md:text-4xl lg:text-5xl">{settings.hero_subtitle}</span>
-            ) : t("hero.templeLocation") ? (
-              <span className="block animate-text-shimmer">{t("hero.templeLocation")}</span>
+            {heroTitle}
+            {heroSubtitle ? (
+              <span className="block animate-text-shimmer text-2xl md:text-4xl lg:text-5xl">{heroSubtitle}</span>
             ) : null}
           </h1>
 
@@ -236,13 +303,13 @@ const Hero = () => {
                 {t("hero.viewDarshanTimings")}
               </Button>
             </Link>
-            <Link to={settings.hero_button_link} className="w-full sm:w-auto">
+            <Link to={heroButtonLink} className="w-full sm:w-auto">
               <Button
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto border-2 border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/10 px-6 md:px-8 py-5 md:py-6 text-base md:text-lg backdrop-blur-sm"
               >
-                {settings.hero_button_text}
+                {heroButtonText}
               </Button>
             </Link>
           </div>

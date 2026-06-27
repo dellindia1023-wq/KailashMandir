@@ -6,6 +6,7 @@ import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Loader2,
   Calendar,
@@ -37,7 +38,7 @@ interface SavedKundli {
   birth_time: string;
   birth_place: string;
   created_at: string;
-  kundli_data: any;
+  kundli_data: Record<string, unknown>;
 }
 
 interface Profile {
@@ -85,18 +86,32 @@ const UserDashboardHome = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, [user]);
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   if (loading) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="space-y-6 py-10 px-4 lg:px-0">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-32 rounded-3xl" />
+          <Skeleton className="h-32 rounded-3xl" />
+          <Skeleton className="h-32 rounded-3xl" />
+          <Skeleton className="h-32 rounded-3xl" />
+        </div>
+        <Skeleton className="h-96 rounded-3xl" />
+        <Skeleton className="h-72 rounded-3xl" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 py-4 lg:py-6">
       {/* Welcome */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-saffron flex items-center justify-center text-primary-foreground text-2xl font-heading overflow-hidden">
+          <div className="w-16 h-16 rounded-full bg-gradient-saffron flex items-center justify-center text-primary-foreground text-2xl font-heading overflow-hidden shadow-sm">
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
@@ -111,7 +126,7 @@ const UserDashboardHome = () => {
             <p className="text-muted-foreground">{user?.email}</p>
           </div>
         </div>
-        <Button variant="outline" onClick={() => setEditProfileOpen(true)}>
+        <Button variant="outline" className="h-11 px-4" onClick={() => setEditProfileOpen(true)}>
           <Pencil className="h-4 w-4 mr-2" />
           Edit Profile
         </Button>
@@ -119,7 +134,7 @@ const UserDashboardHome = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-primary/10 to-saffron/5 border-primary/20">
+        <Card className="rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/10 to-saffron/5 shadow-sm">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
               <Calendar className="h-6 w-6 text-primary" />
@@ -130,7 +145,7 @@ const UserDashboardHome = () => {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-saffron/10 to-gold/5 border-saffron/20">
+        <Card className="rounded-3xl border border-saffron/10 bg-gradient-to-br from-saffron/10 to-gold/5 shadow-sm">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-saffron/20 flex items-center justify-center">
               <Heart className="h-6 w-6 text-saffron" />
@@ -141,7 +156,7 @@ const UserDashboardHome = () => {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-maroon/10 to-secondary/5 border-maroon/20">
+        <Card className="rounded-3xl border border-maroon/10 bg-gradient-to-br from-maroon/10 to-secondary/5 shadow-sm">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-maroon/20 flex items-center justify-center">
               <CreditCard className="h-6 w-6 text-maroon" />
@@ -152,7 +167,7 @@ const UserDashboardHome = () => {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-gold/10 to-accent/5 border-gold/20">
+        <Card className="rounded-3xl border border-gold/10 bg-gradient-to-br from-gold/10 to-accent/5 shadow-sm">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
               <IndianRupee className="h-6 w-6 text-gold" />
@@ -167,7 +182,7 @@ const UserDashboardHome = () => {
         </Card>
       </div>
 
-      <Card className="border-primary/20">
+      <Card className="rounded-3xl border border-primary/20 shadow-sm">
         <CardContent className="p-6 space-y-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -231,9 +246,9 @@ const UserDashboardHome = () => {
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center">
+            <div className="rounded-3xl border border-dashed border-border p-8 text-center bg-muted/50">
               <Sparkles className="h-8 w-8 text-primary mx-auto mb-3" />
-              <h3 className="font-heading font-semibold text-foreground mb-1">No saved Kundlis yet</h3>
+              <h3 className="font-heading text-lg font-semibold text-foreground mb-1">No saved Kundlis yet</h3>
               <p className="text-sm text-muted-foreground mb-4">Generate a Kundli and save it to see it here later.</p>
               <Link to="/kundli">
                 <Button>

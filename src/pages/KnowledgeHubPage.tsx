@@ -13,6 +13,7 @@ import { Loader2, Search, ChevronDown, ChevronUp, HelpCircle } from "lucide-reac
 import templeHero from "@/assets/gallery/devotees-prayer.jpg";
 import { BASE_URL } from "@/constants/seo";
 import { buildContentAutomationMetadata, buildKnowledgeContentMetadata } from "@/lib/contentSeo";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 export default function KnowledgeHubPage() {
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
@@ -195,9 +196,9 @@ export default function KnowledgeHubPage() {
                                 className="mb-4 h-48 w-full rounded-lg object-cover"
                               />
                             )}
-                            <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed text-base">
-                              {article.answer}
-                            </p>
+                            <div className="text-muted-foreground leading-relaxed text-base">
+                              <MarkdownContent content={article.answer || ""} />
+                            </div>
                             {metadataById.get(`${BASE_URL}/knowledge-hub#${article.id}`) && (
                               <div className="mt-4 space-y-3 rounded-md border bg-background/70 p-3 text-sm text-muted-foreground">
                                 <div>

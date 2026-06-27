@@ -7,7 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Upload, Check, AlertCircle } from "lucide-react";
+import { Loader2, Check, AlertCircle } from "lucide-react";
+
+type HeroMediaItem = {
+  url: string;
+  alt?: string;
+  media_type?: "image" | "video";
+  title?: string;
+  subtitle?: string;
+  button_text?: string;
+  button_link?: string;
+  display_order?: number;
+  active?: boolean;
+};
 
 interface HomepageSettings {
   id: string;
@@ -15,7 +27,7 @@ interface HomepageSettings {
   hero_subtitle: string;
   hero_button_text: string;
   hero_button_link: string;
-  hero_images: Array<{ url: string; alt: string }> | null;
+  hero_images: HeroMediaItem[] | null;
   years_of_heritage: number;
   daily_devotees: number;
   days_open: number;
@@ -29,9 +41,11 @@ export const AdminContentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [heroImages, setHeroImages] = useState<Array<{ url: string; alt: string }>>([]);
+  const [heroItems, setHeroItems] = useState<HeroMediaItem[]>([]);
+  const [selectedHeroIndex, setSelectedHeroIndex] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadMediaType, setUploadMediaType] = useState<"image" | "video" | null>(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -77,7 +91,13 @@ export const AdminContentManagement = () => {
           announcement_enabled: data.announcement_enabled,
         });
         if (data.hero_images && Array.isArray(data.hero_images)) {
-          setHeroImages(data.hero_images);
+          setHeroItems(data.hero_images.map((item: HeroMediaItem) => ({
+            ...item,
+            active: item.active !== false,
+            media_type: item.media_type || (item.url?.match(/\.(mp4|webm)(?:\?.*)?$/i) ? "video" : "image"),
+          })));
+        } else if (data.hero_image_url) {
+          setHeroItems([{ url: data.hero_image_url, alt: "Hero image", media_type: "image", active: true }]);
         }
       }
     } catch (error) {
@@ -91,16 +111,18 @@ export const AdminContentManagement = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // Validate file type
-      if (!selectedFile.type.startsWith("image/")) {
-        toast.error("Please select an image file");
+      const isImage = selectedFile.type.startsWith("image/");
+      const isVideo = selectedFile.type.startsWith("video/");
+      if (!isImage && !isVideo) {
+        toast.error("Please select an image or video file");
         return;
       }
-      // Validate file size (5MB max)
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error("File size must be less than 5MB");
+      // Validate file size (20MB max)
+      if (selectedFile.size > 20 * 1024 * 1024) {
+        toast.error("File size must be less than 20MB");
         return;
       }
+      setUploadMediaType(isVideo ? "video" : "image");
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -128,7 +150,11 @@ export const AdminContentManagement = () => {
     }));
   };
 
-  const uploadImage = async (file: File): Promise<string> => {
+  const updateHeroItem = (index: number, changes: Partial<HeroMediaItem>) => {
+    setHeroItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...changes } : item)));
+  };
+
+  const uploadMedia = async (file: File): Promise<string> => {
     setUploading(true);
     try {
       const fileExt = file.name.split(".").pop();
@@ -145,7 +171,7 @@ export const AdminContentManagement = () => {
       return data.publicUrl;
     } catch (error) {
       console.error("Error uploading file:", error);
-      toast.error("Failed to upload image");
+      toast.error("Failed to upload media");
       throw error;
     } finally {
       setUploading(false);
@@ -156,19 +182,42 @@ export const AdminContentManagement = () => {
     try {
       setSaving(true);
 
-      let finalHeroImages = heroImages;
+      let finalHeroItems = heroItems;
 
-      // Upload new image if provided
       if (file) {
-        const imageUrl = await uploadImage(file);
-        finalHeroImages = [...heroImages, { url: imageUrl, alt: "Hero image" }];
+        const mediaUrl = await uploadMedia(file);
+        const mediaType = uploadMediaType || (file.type.startsWith("video/") ? "video" : "image");
+        const currentDisplayOrder =
+          selectedHeroIndex !== null && heroItems[selectedHeroIndex]
+            ? heroItems[selectedHeroIndex].display_order ?? selectedHeroIndex
+            : heroItems.length;
+
+        const mediaItem: HeroMediaItem = {
+          url: mediaUrl,
+          alt: `Hero ${mediaType}`,
+          media_type: mediaType,
+          active: true,
+          display_order: currentDisplayOrder,
+        };
+
+        if (selectedHeroIndex !== null && heroItems[selectedHeroIndex]) {
+          finalHeroItems = heroItems.map((item, index) =>
+            index === selectedHeroIndex ? { ...item, ...mediaItem } : item
+          );
+          setSelectedHeroIndex(null);
+        } else {
+          finalHeroItems = [...heroItems, mediaItem];
+        }
+
         setFile(null);
         setPreviewUrl(null);
+        setUploadMediaType(null);
       }
 
       const updateData = {
         ...formData,
-        hero_images: finalHeroImages,
+        hero_images: finalHeroItems,
+        hero_image_url: finalHeroItems.length > 0 ? finalHeroItems[0].url : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -221,50 +270,203 @@ export const AdminContentManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Image Upload - Multiple Images */}
+          {/* Hero Media Upload */}
           <div>
-            <Label>Hero Carousel Images (Auto-rotates every 5 seconds)</Label>
+            <Label>Hero Media Items (Images & Videos)</Label>
             <div className="mt-2">
-              {/* Existing Images Gallery */}
-              {heroImages.length > 0 && (
+              {heroItems.length > 0 && (
                 <div className="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {heroImages.map((image, idx) => (
-                    <div key={idx} className="relative group rounded-lg overflow-hidden border border-border">
-                      <img
-                        src={image.url}
-                        alt={image.alt}
-                        className="w-full h-32 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                        <button
-                          onClick={() => setHeroImages(heroImages.filter((_, i) => i !== idx))}
-                          className="opacity-0 group-hover:opacity-100 px-3 py-1 bg-red-600 text-white text-sm rounded transition-opacity"
-                        >
-                          Remove
-                        </button>
+                  {heroItems.map((item, idx) => (
+                    <div key={idx} className="rounded-lg overflow-hidden border border-border bg-background">
+                      <div className="relative">
+                        {item.media_type === "video" ? (
+                          <video
+                            src={item.url}
+                            className="w-full h-32 object-cover"
+                            muted
+                            loop
+                            playsInline
+                            preload="metadata"
+                          />
+                        ) : (
+                          <img
+                            src={item.url}
+                            alt={item.alt || "Hero media"}
+                            className="w-full h-32 object-cover"
+                          />
+                        )}
+                        <span className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-white">
+                          {item.media_type || "image"}
+                        </span>
+                      </div>
+                      <div className="p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground line-clamp-1">{item.title || item.alt || `Slide ${idx + 1}`}</p>
+                            {item.subtitle && <p className="text-xs text-muted-foreground line-clamp-2">{item.subtitle}</p>}
+                          </div>
+                          <span className={`text-[10px] rounded-full px-2 py-1 ${item.active ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}>
+                            {item.active ? "Active" : "Disabled"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedHeroIndex(idx)}
+                            className="rounded-md border border-border px-2 py-2 text-left text-primary hover:bg-primary/10"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHeroItems(heroItems.filter((_, i) => i !== idx))}
+                            className="rounded-md border border-border px-2 py-2 text-left text-destructive hover:bg-destructive/10"
+                          >
+                            Remove
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const itemToCopy = heroItems[idx];
+                              const copy = { ...itemToCopy, display_order: heroItems.length };
+                              setHeroItems([...heroItems.slice(0, idx + 1), copy, ...heroItems.slice(idx + 1)]);
+                            }}
+                            className="rounded-md border border-border px-2 py-2 text-left text-primary hover:bg-primary/10"
+                          >
+                            Duplicate
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (idx === 0) return;
+                              const nextItems = [...heroItems];
+                              [nextItems[idx - 1], nextItems[idx]] = [nextItems[idx], nextItems[idx - 1]];
+                              setHeroItems(nextItems.map((item, index) => ({ ...item, display_order: index })));
+                            }}
+                            className="rounded-md border border-border px-2 py-2 text-left text-primary hover:bg-primary/10"
+                          >
+                            Up
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (idx === heroItems.length - 1) return;
+                              const nextItems = [...heroItems];
+                              [nextItems[idx + 1], nextItems[idx]] = [nextItems[idx], nextItems[idx + 1]];
+                              setHeroItems(nextItems.map((item, index) => ({ ...item, display_order: index })));
+                            }}
+                            className="rounded-md border border-border px-2 py-2 text-left text-primary hover:bg-primary/10"
+                          >
+                            Down
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHeroItems(heroItems.map((item, index) => index === idx ? { ...item, active: !item.active } : item));
+                            }}
+                            className="rounded-md border border-border px-2 py-2 text-left text-primary hover:bg-primary/10"
+                          >
+                            {item.active ? "Disable" : "Enable"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Preview for new file */}
               {previewUrl && (
                 <div className="mb-4 rounded-lg overflow-hidden border border-border bg-muted">
                   <div className="text-xs text-muted-foreground p-2">Preview (before uploading)</div>
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="w-full h-40 object-cover"
-                  />
+                  {uploadMediaType === "video" ? (
+                    <video
+                      src={previewUrl}
+                      className="w-full h-40 object-cover"
+                      muted
+                      loop
+                      playsInline
+                      controls={false}
+                    />
+                  ) : (
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="w-full h-40 object-cover"
+                    />
+                  )}
                 </div>
               )}
 
-              {/* File Input */}
+              {selectedHeroIndex !== null && heroItems[selectedHeroIndex] && (
+                <div className="space-y-4 rounded-2xl border border-border bg-muted p-4 mb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Edit Selected Hero Item</p>
+                      <p className="text-xs text-muted-foreground">Changes are saved with the main Save button.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHeroIndex(null)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label htmlFor="hero_item_title">Item Title</Label>
+                      <Input
+                        id="hero_item_title"
+                        value={heroItems[selectedHeroIndex].title || ""}
+                        onChange={(e) => updateHeroItem(selectedHeroIndex, { title: e.target.value })}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hero_item_subtitle">Item Subtitle</Label>
+                      <Input
+                        id="hero_item_subtitle"
+                        value={heroItems[selectedHeroIndex].subtitle || ""}
+                        onChange={(e) => updateHeroItem(selectedHeroIndex, { subtitle: e.target.value })}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hero_item_button_text">Item Button Text</Label>
+                      <Input
+                        id="hero_item_button_text"
+                        value={heroItems[selectedHeroIndex].button_text || ""}
+                        onChange={(e) => updateHeroItem(selectedHeroIndex, { button_text: e.target.value })}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hero_item_button_link">Item Button Link</Label>
+                      <Input
+                        id="hero_item_button_link"
+                        value={heroItems[selectedHeroIndex].button_link || ""}
+                        onChange={(e) => updateHeroItem(selectedHeroIndex, { button_link: e.target.value })}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hero_item_alt">Alt Text</Label>
+                      <Input
+                        id="hero_item_alt"
+                        value={heroItems[selectedHeroIndex].alt || ""}
+                        onChange={(e) => updateHeroItem(selectedHeroIndex, { alt: e.target.value })}
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-4">
                 <Input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/webm"
                   onChange={handleFileChange}
                   disabled={uploading}
                   className="flex-1"
@@ -274,7 +476,7 @@ export const AdminContentManagement = () => {
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                JPG, PNG or WebP. Max 5MB. Add multiple images for carousel effect.
+                JPG, PNG, WebP, MP4, WebM. Max 20MB. Add or replace hero media items.
               </p>
             </div>
           </div>
