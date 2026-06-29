@@ -13,9 +13,9 @@ export const EmailFooter = () => (
   >
     <div style={{ marginBottom: "8px", fontWeight: 700 }}>Shri Kailash Mahadev Temple</div>
     <div>Temple Address: 18/2, Agra Road, Mathura, Uttar Pradesh</div>
-    <div>Website: <a href="https://kailashmahadevtemple.com" style={footerLinkStyle as React.CSSProperties}>kailashmahadevtemple.com</a></div>
+    <div>Website: <a href="https://kailashmahadev.in" style={footerLinkStyle as React.CSSProperties}>kailashmahadev.in</a></div>
     <div>Contact: +91-98765-43210</div>
-    <div>Email: info@kailashmahadevtemple.com</div>
+    <div>Email: kailashmahadevagra@gmail.com</div>
     <div style={{ marginTop: "10px" }}>
       <a href="https://www.facebook.com" style={footerLinkStyle as React.CSSProperties}>Facebook</a>
       {" • "}

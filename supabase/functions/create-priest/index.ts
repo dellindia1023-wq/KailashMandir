@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendEmail, WelcomeEmail } from "../shared/email/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -125,6 +126,29 @@ serve(async (req) => {
         .from("profiles")
         .update({ phone: phone.trim().slice(0, 20) })
         .eq("user_id", newUser.user.id);
+    }
+
+    // Send welcome email to the priest account
+    try {
+      const recipientEmail = newUser.user.email;
+      const recipientName = safeName || undefined;
+      if (recipientEmail) {
+        const subject = `Welcome to Kailash Mahadev Temple`;
+        const react = WelcomeEmail({ recipientName: recipientName || "Priest" });
+
+        const result = await sendEmail({
+          to: recipientEmail,
+          subject,
+          react,
+          previewText: "Your priest account has been created.",
+          templateName: "welcome",
+          supabaseClient: adminClient,
+        });
+
+        console.log("[create-priest] welcome email result", { userId: newUser.user.id, result });
+      }
+    } catch (err) {
+      console.error("[create-priest] failed to send welcome email", err);
     }
 
     return new Response(

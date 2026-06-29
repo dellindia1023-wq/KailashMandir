@@ -106,19 +106,15 @@ export const AssignPriestDialog = ({
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from("puja_bookings")
-        .update({
-          assigned_priest_id: selectedPriest || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", booking.id);
+      // Call Edge Function to perform update + notify priest
+      const priestUserId = selectedPriest === "unassign" ? null : selectedPriest;
+      const { data, error } = await supabase.functions.invoke("assign-priest", {
+        body: { bookingId: booking.id, priestUserId },
+      });
 
       if (error) throw error;
 
-      toast.success(
-        selectedPriest ? "Priest assigned successfully" : "Priest unassigned"
-      );
+      toast.success(priestUserId ? "Priest assigned successfully" : "Priest unassigned");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {

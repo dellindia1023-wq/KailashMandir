@@ -130,7 +130,7 @@ export const AddPriestDialog = ({ open, onOpenChange, onSuccess }: AddPriestDial
             </Label>
             <Input
               type="tel"
-              placeholder="+91 9876543210"
+              placeholder="+91 8859692841"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />

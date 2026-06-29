@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { evaluateRazorpayVerification } from "../shared/razorpay-verification.ts";
+import { sendEmail, DonationReceiptEmail } from "../shared/email/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -235,6 +236,36 @@ serve(async (req: Request) => {
       paymentId: razorpayPaymentId,
       status: "completed",
     });
+
+      // Send donation receipt email (if donor email exists)
+      try {
+        const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("user_id", user.id).maybeSingle();
+        const recipientEmail = profile?.email;
+        const recipientName = profile?.full_name || "Devotee";
+
+        if (recipientEmail) {
+          // Fetch donation details for amount/reference
+          const { data: donationRow } = await supabase.from("donations").select("amount, tier").eq("id", donationId).maybeSingle();
+          const amount = donationRow?.amount ?? 0;
+          const donationType = donationRow?.tier ?? "Donation";
+
+          const subject = `Donation Receipt — ${donationId.slice(0, 8).toUpperCase()}`;
+          const react = DonationReceiptEmail({ recipientName, amount, donationType, referenceCode: donationId });
+
+          const result = await sendEmail({
+            to: recipientEmail,
+            subject,
+            react,
+            previewText: "Thank you for your generous donation to the temple.",
+            templateName: "donation_receipt",
+            supabaseClient: supabase,
+          });
+
+          console.log("[verify-donation-payment] donation email send result", { donationId, result });
+        }
+      } catch (emailErr) {
+        console.error("[verify-donation-payment] failed to send donation receipt email", { donationId, error: emailErr });
+      }
 
     console.log("[verify-donation-payment] response sent", {
       donationId,

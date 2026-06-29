@@ -51,6 +51,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       },
     });
+    if (!error) {
+      try {
+        // Fire-and-forget welcome email via Edge Function
+        await supabase.functions.invoke("send-welcome-email", {
+          body: { email, fullName },
+        });
+      } catch (err) {
+        // don't block signup on email failure
+        console.warn("send-welcome-email failed:", err);
+      }
+    }
+
     return { error };
   };
 
