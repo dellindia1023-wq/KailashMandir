@@ -28,18 +28,40 @@ const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event from the auth redirect
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    const detectRecoverySession = async () => {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      const hashParams = new URLSearchParams(hash.replace(/^#/, ""));
+      const searchParams = new URLSearchParams(search);
+
+      const isRecoveryFromUrl =
+        hashParams.get("type") === "recovery" ||
+        searchParams.get("type") === "recovery" ||
+        hash.includes("type=recovery");
+
+      if (isRecoveryFromUrl) {
         setIsRecovery(true);
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        setIsRecovery(true);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (session?.user) {
+          setIsRecovery(true);
+        }
       }
     });
 
-    // Also check URL hash for type=recovery (fallback)
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setIsRecovery(true);
-    }
+    void detectRecoverySession();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -60,15 +82,37 @@ const ResetPassword = () => {
     }
 
     setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    setLoading(false);
 
-    if (updateError) {
-      toast.error(updateError.message);
-    } else {
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        throw new Error("Your reset link is invalid or has expired. Please request a new one.");
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error("We could not verify your password reset session. Please request a new link.");
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+
       setSuccess(true);
       toast.success("Password updated successfully!");
       setTimeout(() => navigate("/auth"), 2000);
+    } catch (err: any) {
+      setError(err?.message || "Unable to update password right now. Please try again.");
+      toast.error(err?.message || "Unable to update password right now.");
+    } finally {
+      setLoading(false);
     }
   };
 

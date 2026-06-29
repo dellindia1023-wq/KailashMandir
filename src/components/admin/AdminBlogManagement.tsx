@@ -14,6 +14,25 @@ import type { Blog } from "@/hooks/useBlogSystem";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { analyzeContentQuality } from "@/lib/contentSeo";
 
+type BlogStatus = Blog["status"];
+
+type BlogFormState = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  category_id: string;
+  seo_title: string;
+  seo_description: string;
+  seo_keywords: string;
+  featured_image_url: string;
+  featured_video_url: string;
+  featured_image_caption: string;
+  image_alt: string;
+  status: BlogStatus;
+  is_featured: boolean;
+};
+
 export const AdminBlogManagement = () => {
   const { data: blogs, isLoading: blogsLoading } = useBlogs(true);
   const { data: categories } = useBlogCategories();
@@ -40,7 +59,7 @@ export const AdminBlogManagement = () => {
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BlogFormState>({
     title: "",
     slug: "",
     excerpt: "",
@@ -53,7 +72,7 @@ export const AdminBlogManagement = () => {
     featured_video_url: "",
     featured_image_caption: "",
     image_alt: "",
-    status: "draft" as const,
+    status: "draft",
     is_featured: false,
   });
 
@@ -219,7 +238,7 @@ export const AdminBlogManagement = () => {
       featured_video_url: (blog as any).featured_video_url || "",
       featured_image_caption: (blog as any).featured_image_caption || "",
       image_alt: (blog as any).image_alt || "",
-      status: blog.status,
+      status: blog.status as Blog["status"],
       is_featured: blog.is_featured,
     });
     setShowForm(true);
@@ -309,7 +328,7 @@ export const AdminBlogManagement = () => {
                     </div>
                     <div>
                       <Label htmlFor="status">Status</Label>
-                      <select id="status" name="status" value={formData.status} onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as any }))} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2">
+                      <select id="status" name="status" value={formData.status} onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as BlogStatus }))} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2">
                         <option value="draft">Draft</option>
                         <option value="published">Published</option>
                         <option value="archived">Archived</option>

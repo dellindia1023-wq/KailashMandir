@@ -130,29 +130,39 @@ export const EditProfileDialog = ({
         avatar_url: profile?.avatar_url,
       };
 
-      const { error } = await supabase
+      const normalizedName = data.full_name.trim();
+      const normalizedPhone = data.phone?.trim() || null;
+
+      const { error: profileError } = await supabase
         .from("profiles")
-        .update({
-          full_name: data.full_name,
-          phone: data.phone || null,
-          avatar_url: avatarUrl || null,
-        })
-        .eq("user_id", userId);
+        .upsert(
+          {
+            user_id: userId,
+            full_name: normalizedName,
+            phone: normalizedPhone,
+            avatar_url: avatarUrl || null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        )
+        .select("id")
+        .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      // Log profile update to audit log
-      await supabase.rpc("log_audit_event", {
+      void supabase.rpc("log_audit_event", {
         _action: "profile_updated",
         _module_name: "profile",
         _details: {
           user_id: userId,
           changes: {
-            full_name: { old: oldProfile.full_name, new: data.full_name },
-            phone: { old: oldProfile.phone, new: data.phone || null },
+            full_name: { old: oldProfile.full_name, new: normalizedName },
+            phone: { old: oldProfile.phone, new: normalizedPhone },
             avatar_changed: oldProfile.avatar_url !== (avatarUrl || null),
           },
         },
+      }).catch((auditError) => {
+        console.warn("Audit logging failed:", auditError);
       });
 
       toast.success("Profile updated successfully");
