@@ -9,8 +9,6 @@ import { Loader2, Search, RefreshCw, UserPlus, Download } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
 import { format } from "date-fns";
 import { AssignPriestDialog } from "./AssignPriestDialog";
-import { toast } from "sonner";
-import { Trash2, CreditCard, RefreshCw as RefreshIcon } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -224,102 +222,18 @@ export const AdminBookingsTable = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setAssignDialogOpen(true);
-                        }}
-                        disabled={booking.payment_status !== "paid"}
-                      >
-                        <UserPlus className="h-4 w-4 mr-1" />
-                        Assign
-                      </Button>
-
-                      {(booking.payment_status === "pending" || booking.payment_status === "failed") && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            if (!confirm("Mark this booking as PAID?")) return;
-                            try {
-                              const { data, error } = await supabase.functions.invoke("admin-mark-paid", { body: { bookingId: booking.id } });
-                              if (error) throw error;
-                              toast.success("Booking marked paid");
-                              fetchBookings();
-                            } catch (err: any) {
-                              console.error(err);
-                              toast.error(err?.message || "Failed to mark paid");
-                            }
-                          }}
-                        >
-                          <CreditCard className="h-4 w-4 mr-1" />
-                          Mark Paid
-                        </Button>
-                      )}
-
-                      {booking.payment_status !== "paid" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const { data, error } = await supabase.functions.invoke("resend-payment-link", { body: { bookingId: booking.id } });
-                              if (error) throw error;
-                              toast.success("Payment link emailed to user");
-                              fetchBookings();
-                            } catch (err: any) {
-                              console.error(err);
-                              toast.error(err?.message || "Failed to resend payment link");
-                            }
-                          }}
-                        >
-                          <RefreshIcon className="h-4 w-4 mr-1" />
-                          Resend
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            const { data, error } = await supabase.functions.invoke("send-booking-email", { body: { bookingId: booking.id, type: "reminder" } });
-                            if (error) throw error;
-                            toast.success("Reminder email sent");
-                          } catch (err: any) {
-                            console.error(err);
-                            toast.error(err?.message || "Failed to send reminder");
-                          }
-                        }}
-                      >
-                        <Mail className="h-4 w-4 mr-1" />
-                        Reminder
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={async () => {
-                          if (!confirm("Delete this booking? This cannot be undone.")) return;
-                          try {
-                            const { error } = await supabase.from("puja_bookings").delete().eq("id", booking.id);
-                            if (error) throw error;
-                            toast.success("Booking deleted");
-                            fetchBookings();
-                          } catch (err: any) {
-                            console.error(err);
-                            toast.error(err?.message || "Failed to delete booking");
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setAssignDialogOpen(true);
+                      }}
+                      disabled={booking.payment_status !== "paid"}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Assign
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))

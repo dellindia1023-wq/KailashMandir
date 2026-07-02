@@ -15,7 +15,7 @@ export const BookingReminderEmail = ({ recipientName = "Devotee", pujaName = "Pu
   <EmailLayout title="Puja Reminder" previewText="This is a reminder for your upcoming temple booking tomorrow.">
     <div>
       <p style={{ margin: "0 0 12px" }}>Namaste {recipientName},</p>
-      <p style={{ margin: "0 0 16px" }}>This is a gentle reminder that your sacred puja at Kailash Mandir Agra is scheduled for tomorrow. Please arrive 15 minutes early.</p>
+      <p style={{ margin: "0 0 16px" }}>This is a gentle reminder that your sacred puja is scheduled for tomorrow. Please arrive 15 minutes early.</p>
       <div style={cardStyle as React.CSSProperties}>
         <div style={{ fontWeight: 700, color: "#B8860B", marginBottom: "10px" }}>{pujaName}</div>
         <div>📅 Date: {formatDate(bookingDate)}</div>

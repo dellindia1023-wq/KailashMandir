@@ -1,0 +1,8 @@
+const { createClient } = require('@supabase/supabase-js');
+const url = 'https://vgqqcafrkydpothcvtan.supabase.co';
+const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZncXFjYWZya3lkcG90aGN2dGFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3Mjg4NzgsImV4cCI6MjA5NzMwNDg3OH0.kS_S-EP0Bml_X7kampNYyGiKAn1bkscIMenDtFo5vgk';
+const supabase = createClient(url, key);
+(async () => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email: 'superadmin@kailash.com', password: 'Super@@1618' });
+  console.log(JSON.stringify({ data, error }, null, 2));
+})();

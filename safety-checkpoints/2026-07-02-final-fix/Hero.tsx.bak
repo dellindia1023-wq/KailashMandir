@@ -152,7 +152,7 @@ const Hero = () => {
   return (
     <section
       id="home"
-      className="relative h-[calc(75vh-64px)] md:h-[85vh] min-h-[520px] flex items-center justify-center overflow-hidden"
+      className="relative h-[calc(100vh-64px)] md:h-screen min-h-[640px] flex items-center justify-center overflow-hidden"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}

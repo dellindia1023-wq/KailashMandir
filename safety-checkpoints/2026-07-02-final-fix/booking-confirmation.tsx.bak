@@ -17,7 +17,7 @@ export const BookingConfirmationEmail = ({ recipientName = "Devotee", pujaName =
   <EmailLayout title="Booking Confirmed" previewText="Your sacred puja booking is confirmed and ready for the temple calendar.">
     <div>
       <p style={{ margin: "0 0 12px" }}>Namaste {recipientName},</p>
-      <p style={{ margin: "0 0 16px" }}>Your puja booking at Kailash Mandir Agra has been confirmed. Please arrive a little early and carry your devotion with you.</p>
+      <p style={{ margin: "0 0 16px" }}>Your puja booking has been confirmed. Please arrive a little early and carry your devotion with you.</p>
       <div style={cardStyle as React.CSSProperties}>
         <div style={{ fontWeight: 700, color: "#B8860B", marginBottom: "10px" }}>{pujaName}</div>
         <div>📅 Date: {formatDate(bookingDate)}</div>

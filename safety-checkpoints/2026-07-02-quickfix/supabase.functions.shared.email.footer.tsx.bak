@@ -11,12 +11,10 @@ export const EmailFooter = () => (
       lineHeight: 1.6,
     }}
   >
-    <div style={{ marginBottom: "8px", fontWeight: 700 }}>Kailash Mandir Agra</div>
-    <div>Shri Kailash Mahadev Temple</div>
-    <div>Sikandra</div>
-    <div>Agra</div>
-    <div>Uttar Pradesh 282007</div>
+    <div style={{ marginBottom: "8px", fontWeight: 700 }}>Shri Kailash Mahadev Temple</div>
+    <div>Temple Address: 18/2, Agra Road, Mathura, Uttar Pradesh</div>
     <div>Website: <a href="https://kailashmahadev.in" style={footerLinkStyle as React.CSSProperties}>kailashmahadev.in</a></div>
+    <div>Contact: +91-98765-43210</div>
     <div>Email: kailashmahadevagra@gmail.com</div>
     <div style={{ marginTop: "10px" }}>
       <a href="https://www.facebook.com" style={footerLinkStyle as React.CSSProperties}>Facebook</a>
@@ -25,7 +23,7 @@ export const EmailFooter = () => (
       {" • "}
       <a href="https://www.youtube.com" style={footerLinkStyle as React.CSSProperties}>YouTube</a>
     </div>
-    <div style={{ marginTop: "10px", color: "#D1D5DB" }}>© 2026 Kailash Mandir Agra. All rights reserved.</div>
+    <div style={{ marginTop: "10px", color: "#D1D5DB" }}>© 2026 Kailash Mahadev Temple. All rights reserved.</div>
     <div style={{ marginTop: "8px", color: "#9CA3AF" }}>This is an automated transactional email.</div>
   </div>
 );

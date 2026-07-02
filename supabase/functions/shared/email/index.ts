@@ -13,3 +13,4 @@ export * from "./templates/booking-cancelled.tsx";
 export * from "./templates/password-reset.tsx";
 export * from "./templates/verify-email.tsx";
 export * from "./templates/contact-auto-reply.tsx";
+export * from "./templates/payment-link.tsx";

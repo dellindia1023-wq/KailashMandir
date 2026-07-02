@@ -37,11 +37,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { mergeKeywords, SAME_AS, SITE_ALTERNATE_NAMES } from "@/constants/seo";
 import { useBlogs } from "@/hooks/useBlog";
 
-const formatBlogDate = (publishedAt?: string | null, createdAt?: string | null) => {
-  const date = publishedAt ? new Date(publishedAt) : createdAt ? new Date(createdAt) : null;
-  return date ? date.toLocaleDateString("en-IN") : "";
-};
-
 /* ─── Animated Counter Hook ─── */
 const useCountUp = (target: number, duration = 2000) => {
   const [count, setCount] = useState(0);
@@ -445,7 +440,7 @@ const Index = () => {
                 </div>
 
                 {/* Desktop: 3 Column Grid */}
-                <div ref={blogStagger.ref} className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto mb-6">
+                <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto mb-6">
                   {blogs.slice(0, 3).map((blog, i) => (
                     <Link key={blog.id} to={`/blog/${blog.slug}`}>
                       <Card
@@ -479,7 +474,7 @@ const Index = () => {
                             {blog.excerpt}
                           </p>
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{formatBlogDate(blog.published_at, blog.created_at)}</span>
+                            <span>{new Date(blog.created_at).toLocaleDateString("en-IN")}</span>
                             <div className="flex items-center gap-1">
                               <Eye className="h-3 w-3" />
                               <span>{blog.view_count || 0}</span>
@@ -517,7 +512,7 @@ const Index = () => {
                               </h3>
                             </div>
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{formatBlogDate(blog.published_at, blog.created_at)}</span>
+                              <span>{new Date(blog.created_at).toLocaleDateString("en-IN")}</span>
                               <div className="flex items-center gap-1">
                                 <Eye className="h-3 w-3" />
                                 <span>{blog.view_count || 0}</span>

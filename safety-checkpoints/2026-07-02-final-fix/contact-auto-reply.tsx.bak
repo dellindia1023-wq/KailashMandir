@@ -11,7 +11,7 @@ export const ContactAutoReply = ({ recipientName = "Devotee" }: ContactAutoReply
   <EmailLayout title="Thank You for Contacting Us" previewText="We have received your message and will get back to you shortly.">
     <div>
       <p style={{ margin: "0 0 12px" }}>Namaste {recipientName},</p>
-      <p style={{ margin: "0 0 16px" }}>Thank you for reaching out to Kailash Mandir Agra. We have received your message and will respond as soon as possible.</p>
+      <p style={{ margin: "0 0 16px" }}>Thank you for reaching out to Shri Kailash Mahadev Temple. We have received your message and will respond as soon as possible.</p>
       <div style={cardStyle as React.CSSProperties}>
         <p style={{ margin: 0 }}>For urgent requests, please contact the temple office directly on the number below.</p>
       </div>

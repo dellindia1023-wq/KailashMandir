@@ -8,8 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useBookingEmail } from "@/hooks/useBookingEmail";
-import { openRazorpayCheckout } from "@/lib/razorpay";
-import { toast } from "sonner";
 import { generateReceipt } from "@/lib/generateReceipt";
 import {
   Calendar, Clock, ArrowRight, Loader2, Mail, CalendarClock, X, Download
@@ -146,50 +144,6 @@ const UserBookings = () => {
                           <Button variant="outline" size="sm" onClick={() => setCancelBooking(booking)} className="text-xs text-destructive hover:text-destructive"><X className="h-3 w-3 mr-1" /> Cancel</Button>
                         </>
                       )}
-                    </div>
-                  )}
-                  {booking.payment_status === "pending" && (
-                    <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900">
-                      <p className="font-medium">Payment Pending</p>
-                      <p className="mt-1 text-xs text-yellow-900/80">Your booking has been reserved, but payment has not completed yet. If you’ve already paid, please wait a few minutes for confirmation.</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.location.href = "mailto:kailashmahadevagra@gmail.com"}
-                          className="text-xs"
-                        >
-                          Contact Support
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={fetchBookings}
-                          disabled={loading}
-                          className="text-xs"
-                        >
-                          Refresh Status
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const { data: orderData, error } = await supabase.functions.invoke("create-razorpay-order", { body: { bookingId: booking.id } });
-                              if (error) throw error;
-                              await openRazorpayCheckout({ orderId: orderData.orderId, bookingId: orderData.bookingId, amount: orderData.amount, currency: orderData.currency, keyId: orderData.keyId }, `${booking.pujas.name} Booking`, user?.email || "");
-                              toast.success("Payment completed — verifying...");
-                              fetchBookings();
-                            } catch (err: any) {
-                              console.error(err);
-                              toast.error(err?.message || "Payment failed or cancelled");
-                            }
-                          }}
-                          className="text-xs"
-                        >
-                          Pay Now
-                        </Button>
-                      </div>
                     </div>
                   )}
                 </div>

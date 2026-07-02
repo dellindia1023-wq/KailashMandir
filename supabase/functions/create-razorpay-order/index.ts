@@ -29,9 +29,12 @@ serve(async (req: Request) => {
 
     const supabaseUrl = (globalThis as any).Deno?.env?.get("SUPABASE_URL")!;
     const supabaseKey = (globalThis as any).Deno?.env?.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = (globalThis as any).Deno?.env?.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -49,47 +52,110 @@ serve(async (req: Request) => {
       });
     }
 
-    const { pujaId, amount, bookingDate, bookingTime, devoteeName, devoteeGotra, specialInstructions } = body as any;
+    const { bookingId, pujaId, amount, bookingDate, bookingTime, devoteeName, devoteeGotra, specialInstructions } = body as any;
 
-    // Validate pujaId
-    if (typeof pujaId !== "string" || !UUID_REGEX.test(pujaId)) {
-      return new Response(JSON.stringify({ error: "Invalid puja ID" }), {
-        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    const { data: isAdminData, error: roleCheckError } = await supabaseAdmin.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin",
+    });
+    const isAdmin = !!isAdminData;
+
+    let createBookingPayload: Record<string, unknown> | null = null;
+    let orderAmount = amount;
+    let notes: Record<string, unknown> = {};
+    let bookingRecordId: string | null = null;
+
+    if (bookingId) {
+      if (typeof bookingId !== "string" || !UUID_REGEX.test(bookingId)) {
+        return new Response(JSON.stringify({ error: "Invalid booking ID" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const { data: existingBooking, error: existingBookingError } = await supabase
+        .from("puja_bookings")
+        .select("id, user_id, amount, puja_id, payment_status")
+        .eq("id", bookingId)
+        .maybeSingle();
+
+      if (existingBookingError || !existingBooking) {
+        console.error("Booking fetch error:", existingBookingError);
+        return new Response(JSON.stringify({ error: "Booking not found" }), {
+          status: 404, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (existingBooking.user_id !== user.id && !isAdmin) {
+        return new Response(JSON.stringify({ error: "Unauthorized to retry this booking" }), {
+          status: 403, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (!["pending", "failed"].includes(existingBooking.payment_status)) {
+        return new Response(JSON.stringify({ error: "Only pending or failed bookings can be retried" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      orderAmount = Number(existingBooking.amount);
+      bookingRecordId = existingBooking.id;
+      notes = {
+        puja_id: existingBooking.puja_id,
+        user_id: existingBooking.user_id,
+      };
+    } else {
+      if (typeof pujaId !== "string" || !UUID_REGEX.test(pujaId)) {
+        return new Response(JSON.stringify({ error: "Invalid puja ID" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
+        return new Response(JSON.stringify({ error: "Invalid amount" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (typeof bookingDate !== "string" || !DATE_REGEX.test(bookingDate)) {
+        return new Response(JSON.stringify({ error: "Invalid booking date format (YYYY-MM-DD)" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (typeof bookingTime !== "string" || !TIME_REGEX.test(bookingTime)) {
+        return new Response(JSON.stringify({ error: "Invalid booking time format (HH:MM)" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (typeof devoteeName !== "string" || devoteeName.trim().length < 2 || devoteeName.trim().length > 100) {
+        return new Response(JSON.stringify({ error: "Devotee name must be 2-100 characters" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
+      const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
+      const safeName = devoteeName.trim().slice(0, 100);
+
+      createBookingPayload = {
+        user_id: user.id,
+        puja_id: pujaId,
+        booking_date: bookingDate,
+        booking_time: bookingTime,
+        devotee_name: safeName,
+        devotee_gotra: safeGotra,
+        special_instructions: safeInstructions,
+        amount: amount,
+        payment_status: "pending",
+        booking_status: "pending",
+      };
+      notes = {
+        puja_id: pujaId,
+        user_id: user.id,
+        devotee_name: safeName,
+      };
     }
-
-    // Validate amount
-    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
-      return new Response(JSON.stringify({ error: "Invalid amount" }), {
-        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    // Validate bookingDate
-    if (typeof bookingDate !== "string" || !DATE_REGEX.test(bookingDate)) {
-      return new Response(JSON.stringify({ error: "Invalid booking date format (YYYY-MM-DD)" }), {
-        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    // Validate bookingTime
-    if (typeof bookingTime !== "string" || !TIME_REGEX.test(bookingTime)) {
-      return new Response(JSON.stringify({ error: "Invalid booking time format (HH:MM)" }), {
-        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    // Validate devoteeName
-    if (typeof devoteeName !== "string" || devoteeName.trim().length < 2 || devoteeName.trim().length > 100) {
-      return new Response(JSON.stringify({ error: "Devotee name must be 2-100 characters" }), {
-        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    // Sanitize optional fields
-    const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
-    const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
-    const safeName = devoteeName.trim().slice(0, 100);
 
     const razorpayKeyId = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_ID");
     const razorpayKeySecret = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_SECRET");
@@ -112,14 +178,10 @@ serve(async (req: Request) => {
         Authorization: `Basic ${encode(`${razorpayKeyId}:${razorpayKeySecret}`)}`,
       },
       body: JSON.stringify({
-        amount: Math.round(amount * 100),
+        amount: Math.round(orderAmount * 100),
         currency: "INR",
         receipt: `puja_${Date.now()}`,
-        notes: {
-          puja_id: pujaId,
-          user_id: user.id,
-          devotee_name: safeName,
-        },
+        notes,
       }),
     });
 
@@ -133,34 +195,57 @@ serve(async (req: Request) => {
 
     const razorpayOrder = await razorpayResponse.json();
 
-    const { data: booking, error: bookingError } = await supabase
-      .from("puja_bookings")
-      .insert({
-        user_id: user.id,
-        puja_id: pujaId,
-        booking_date: bookingDate,
-        booking_time: bookingTime,
-        devotee_name: safeName,
-        devotee_gotra: safeGotra,
-        special_instructions: safeInstructions,
-        amount: amount,
-        razorpay_order_id: razorpayOrder.id,
-        payment_status: "pending",
-      })
-      .select()
-      .single();
+    if (bookingRecordId) {
+      const updateQuery = supabaseAdmin
+        .from("puja_bookings")
+        .update({
+          razorpay_order_id: razorpayOrder.id,
+          payment_status: "pending",
+          payment_id: null,
+          razorpay_signature: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", bookingRecordId)
+        .in("payment_status", ["pending", "failed"]);
 
-    if (bookingError) {
-      console.error("Booking creation error:", bookingError);
-      return new Response(JSON.stringify({ error: "Failed to create booking record" }), {
-        status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      if (!isAdmin) {
+        updateQuery.eq("user_id", user.id);
+      }
+
+      const { error: updateError } = await updateQuery;
+
+      if (updateError) {
+        console.error("Booking update error:", updateError);
+        return new Response(JSON.stringify({ error: "Failed to update booking for retry" }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
+    if (createBookingPayload) {
+      const { data: booking, error: bookingError } = await supabase
+        .from("puja_bookings")
+        .insert({
+          ...createBookingPayload,
+          razorpay_order_id: razorpayOrder.id,
+        })
+        .select()
+        .single();
+
+      if (bookingError) {
+        console.error("Booking creation error:", bookingError);
+        return new Response(JSON.stringify({ error: "Failed to create booking record" }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      bookingRecordId = booking.id;
     }
 
     return new Response(
       JSON.stringify({
         orderId: razorpayOrder.id,
-        bookingId: booking.id,
+        bookingId: bookingRecordId,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
         keyId: razorpayKeyId,

@@ -1,0 +1,6 @@
+AI / GEO guidance for this repo:
+
+- Use server-side functions for any sensitive model calls (service role) to avoid leaking keys.
+- Prefer Resend for transactional email delivery; keep templates in `supabase/functions/shared/email/templates`.
+- For geolocation features, rely on client-provided lat/lng and reverse geocoding via a trusted provider.
+- Keep a privacy policy entry if collecting locations or personal data.
