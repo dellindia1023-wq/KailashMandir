@@ -296,9 +296,13 @@ export const useCreateBlog = () => {
         seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
       };
       
+      // Remove nested `category` object before sending to the DB to avoid unknown column errors
+      const payload: any = { ...enrichedBlog, view_count: 0 };
+      if (payload.category) delete payload.category;
+
       const { data, error } = await supabase
         .from("blogs")
-        .insert([{ ...enrichedBlog, view_count: 0 }])
+        .insert([payload])
         .select()
         .single();
 
@@ -338,9 +342,13 @@ export const useUpdateBlog = () => {
         seo_keywords: blog.seo_keywords?.trim() || automationMetadata.seo_keywords,
       };
       
+      // Remove nested `category` object before updating to avoid sending unknown fields
+      const payload: any = { ...enrichedBlog };
+      if (payload.category) delete payload.category;
+
       const { data, error } = await supabase
         .from("blogs")
-        .update(enrichedBlog)
+        .update(payload)
         .eq("id", blog.id)
         .select()
         .single();

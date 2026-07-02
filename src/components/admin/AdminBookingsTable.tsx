@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, RefreshCw, UserPlus, Download } from "lucide-react";
+import { Loader2, Search, RefreshCw, UserPlus, Download, Mail } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
 import { format } from "date-fns";
 import { AssignPriestDialog } from "./AssignPriestDialog";
