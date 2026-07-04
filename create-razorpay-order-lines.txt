@@ -1,0 +1,180 @@
+﻿004: 
+006:   "Access-Control-Allow-Origin": origin || "*",
+007:   "Access-Control-Allow-Headers": "Authorization, apikey, X-Client-Info, Content-Type, x-supabase-auth, x-service-role-key, x-send-booking-email-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+008:   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+009:   "Access-Control-Allow-Credentials": "true",
+010:   "Vary": "Origin",
+012: 
+016: const MAX_AMOUNT = 10000000;
+017: 
+018: console.log("ðŸš€ create-razorpay-order function starting...");
+019: 
+021:   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+025: 
+027:     const authHeader = req.headers.get("Authorization");
+033: 
+034:     const supabaseUrl = (globalThis as any).Deno?.env?.get("SUPABASE_URL")!;
+035:     const supabaseKey = (globalThis as any).Deno?.env?.get("SUPABASE_ANON_KEY")!;
+036:     const supabaseServiceKey = (globalThis as any).Deno?.env?.get("SUPABASE_SERVICE_ROLE_KEY")!;
+037: 
+041:     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+042: 
+049: 
+050:     let body: unknown;
+052:       body = await req.json();
+058: 
+060: 
+062:       _user_id: user.id,
+063:       _role: "admin",
+065:     const isAdmin = !!isAdminData;
+066: 
+067:     let orderAmount = amount;
+069:     let bookingRecordId: string | null = null;
+070:     let safeGotra: string | null = null;
+071:     let safeInstructions: string | null = null;
+072:     let safeName: string | null = null;
+073: 
+074:     const shouldCreatePendingBooking = createPendingBooking === true;
+075:     const pendingOrderId = typeof existingOrderId === "string" ? existingOrderId : null;
+076: 
+083: 
+085:         .from("puja_bookings")
+086:         .select("id, user_id, amount, puja_id, payment_status")
+087:         .eq("id", bookingId)
+088:         .maybeSingle();
+089: 
+091:         console.error("Booking fetch error:", existingBookingError);
+096: 
+102: 
+108: 
+109:       orderAmount = Number(existingBooking.amount);
+110:       bookingRecordId = existingBooking.id;
+112:         puja_id: existingBooking.puja_id,
+113:         user_id: existingBooking.user_id,
+121: 
+127: 
+133: 
+139: 
+145: 
+146:       const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
+147:       const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
+148:       const safeName = devoteeName.trim().slice(0, 100);
+149: 
+151:         user_id: user.id,
+152:         puja_id: pujaId,
+153:         booking_date: bookingDate,
+154:         booking_time: bookingTime,
+155:         devotee_name: safeName,
+156:         devotee_gotra: safeGotra,
+157:         special_instructions: safeInstructions,
+158:         amount: amount,
+159:         payment_status: "pending",
+160:         booking_status: "pending",
+163:         puja_id: pujaId,
+164:         user_id: user.id,
+165:         devotee_name: safeName,
+168: 
+169:     const razorpayKeyId = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_ID");
+170:     const razorpayKeySecret = (globalThis as any).Deno?.env?.get("RAZORPAY_KEY_SECRET");
+171: 
+182: 
+184:       method: "POST",
+186:         "Content-Type": "application/json",
+190:         amount: Math.round(orderAmount * 100),
+191:         currency: "INR",
+193:         notes,
+196: 
+198:       const errorData = await razorpayResponse.text();
+199:       console.error("Razorpay error:", errorData);
+204: 
+205:     const razorpayOrder = await razorpayResponse.json();
+206: 
+208:       const updateQuery = supabaseAdmin
+209:         .from("puja_bookings")
+211:           razorpay_order_id: razorpayOrder.id,
+212:           payment_status: "pending",
+213:           payment_id: null,
+214:           razorpay_signature: null,
+215:           updated_at: new Date().toISOString(),
+217:         .eq("id", bookingRecordId)
+218:         .in("payment_status", ["pending", "failed"]);
+219: 
+221:         updateQuery.eq("user_id", user.id);
+223: 
+225: 
+227:         console.error("Booking update error:", updateError);
+233: 
+240: 
+266: 
+267:       const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
+268:       const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
+269:       const safeName = devoteeName.trim().slice(0, 100);
+270: 
+272:         .from("puja_bookings")
+273:         .select("id")
+274:         .eq("user_id", user.id)
+275:         .eq("puja_id", pujaId)
+276:         .eq("booking_date", bookingDate)
+277:         .eq("booking_time", bookingTime)
+278:         .eq("devotee_name", safeName)
+279:         .in("payment_status", ["pending", "failed"])
+280:         .maybeSingle();
+281: 
+283:         console.error("Pending booking lookup failed:", findPendingError);
+285: 
+287:         bookingRecordId = existingPendingBooking.id;
+289:           .from("puja_bookings")
+291:             razorpay_order_id: pendingOrderId,
+292:             amount,
+293:             updated_at: new Date().toISOString(),
+295:           .eq("id", bookingRecordId);
+296: 
+298:           console.error("Pending booking update failed:", updatePendingError);
+305:           .from("puja_bookings")
+307:             user_id: user.id,
+308:             puja_id: pujaId,
+309:             booking_date: bookingDate,
+310:             booking_time: bookingTime,
+311:             devotee_name: safeName,
+312:             devotee_gotra: safeGotra,
+313:             special_instructions: safeInstructions,
+314:             amount,
+315:             payment_status: "pending",
+316:             booking_status: "pending",
+317:             razorpay_order_id: pendingOrderId,
+318:             created_at: new Date().toISOString(),
+319:             updated_at: new Date().toISOString(),
+321:           .select()
+322:           .single();
+323: 
+325:           console.error("Pending booking creation error:", bookingError);
+330:         bookingRecordId = booking.id;
+332: 
+333:       return new Response(
+335:           orderId: pendingOrderId,
+336:           bookingId: bookingRecordId,
+337:           amount: Math.round(amount * 100),
+338:           currency: "INR",
+339:           keyId: razorpayKeyId,
+342:       );
+344: 
+351: 
+357: 
+363: 
+369: 
+375: 
+376:       const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
+377:       const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
+378:       const safeName = devoteeName.trim().slice(0, 100);
+379: 
+381:         puja_id: pujaId,
+382:         user_id: user.id,
+383:         booking_date: bookingDate,
+384:         booking_time: bookingTime,
+385:         devotee_name: safeName,
+386:         devotee_gotra: safeGotra,
+387:         special_instructions: safeInstructions,
+390: 
+393:     console.error("Error creating order:", error);
+394:     return new Response(
+397:     );

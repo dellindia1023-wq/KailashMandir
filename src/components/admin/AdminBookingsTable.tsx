@@ -103,6 +103,41 @@ export const AdminBookingsTable = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const getSessionAccessToken = async () => {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token) {
+      throw new Error("Authentication session not found. Please log in again.");
+    }
+    return session.access_token;
+  };
+
+  const callBookingFunction = async (functionName: string, body: unknown) => {
+    const accessToken = await getSessionAccessToken();
+    const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const { data, error } = await supabase.functions.invoke(functionName, {
+      body,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey,
+      },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const handleEdgeFunctionError = (err: unknown, fallbackMessage: string) => {
+    console.error("Edge function error:", err);
+    const message = typeof err === "string"
+      ? err
+      : err && typeof err === "object" && "message" in err && typeof (err as any).message === "string"
+      ? (err as any).message
+      : err && typeof err === "object" && "error" in err && typeof (err as any).error === "string"
+      ? (err as any).error
+      : fallbackMessage;
+
+    toast.error(message || fallbackMessage);
+  };
+
   const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(":");
     const hour = parseInt(hours, 10);
@@ -245,13 +280,11 @@ export const AdminBookingsTable = () => {
                           onClick={async () => {
                             if (!confirm("Mark this booking as PAID?")) return;
                             try {
-                              const { data, error } = await supabase.functions.invoke("admin-mark-paid", { body: { bookingId: booking.id } });
-                              if (error) throw error;
+                              await callBookingFunction("admin-mark-paid", { bookingId: booking.id });
                               toast.success("Booking marked paid");
                               fetchBookings();
                             } catch (err: any) {
-                              console.error(err);
-                              toast.error(err?.message || "Failed to mark paid");
+                              handleEdgeFunctionError(err, "Failed to mark paid");
                             }
                           }}
                         >
@@ -266,13 +299,11 @@ export const AdminBookingsTable = () => {
                           size="sm"
                           onClick={async () => {
                             try {
-                              const { data, error } = await supabase.functions.invoke("resend-payment-link", { body: { bookingId: booking.id } });
-                              if (error) throw error;
+                              await callBookingFunction("resend-payment-link", { bookingId: booking.id });
                               toast.success("Payment link emailed to user");
                               fetchBookings();
                             } catch (err: any) {
-                              console.error(err);
-                              toast.error(err?.message || "Failed to resend payment link");
+                              handleEdgeFunctionError(err, "Failed to resend payment link");
                             }
                           }}
                         >
@@ -286,12 +317,10 @@ export const AdminBookingsTable = () => {
                         size="sm"
                         onClick={async () => {
                           try {
-                            const { data, error } = await supabase.functions.invoke("send-booking-email", { body: { bookingId: booking.id, type: "reminder" } });
-                            if (error) throw error;
+                            await callBookingFunction("admin-send-booking-email", { bookingId: booking.id, type: "reminder" });
                             toast.success("Reminder email sent");
                           } catch (err: any) {
-                            console.error(err);
-                            toast.error(err?.message || "Failed to send reminder");
+                            handleEdgeFunctionError(err, "Failed to send reminder");
                           }
                         }}
                       >

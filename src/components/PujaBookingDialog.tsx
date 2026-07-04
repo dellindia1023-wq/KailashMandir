@@ -94,6 +94,7 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
     }
 
     setLoading(true);
+    onOpenChange(false);
 
     try {
       // Load Razorpay script
@@ -138,6 +139,13 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
               {
                 body: {
                   bookingId: orderData.bookingId,
+                  pujaId: puja.id,
+                  amount: puja.price,
+                  bookingDate: format(date, "yyyy-MM-dd"),
+                  bookingTime: time,
+                  devoteeName,
+                  devoteeGotra: devoteeGotra || undefined,
+                  specialInstructions: specialInstructions || undefined,
                   razorpayOrderId: response.razorpay_order_id,
                   razorpayPaymentId: response.razorpay_payment_id,
                   razorpaySignature: response.razorpay_signature,

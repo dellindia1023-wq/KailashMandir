@@ -101,7 +101,19 @@ serve(async (req: Request) => {
       });
     }
 
-    const { bookingId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = body as any;
+    const {
+      bookingId,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      pujaId,
+      amount,
+      bookingDate,
+      bookingTime,
+      devoteeName,
+      devoteeGotra,
+      specialInstructions,
+    } = body as any;
 
     // Evidence logging (DO NOT log secrets)
     console.log("[verify-razorpay-payment] start", {
@@ -112,10 +124,12 @@ serve(async (req: Request) => {
       userId: user?.id,
     });
 
-    // Validate bookingId
-    if (typeof bookingId !== "string" || !UUID_REGEX.test(bookingId)) {
-      console.error("[verify-razorpay-payment] invalid bookingId", { bookingId });
-      return new Response(JSON.stringify({ error: "Invalid booking ID", bookingId }), {
+    const hasBookingId = typeof bookingId === "string" && UUID_REGEX.test(bookingId);
+    const hasBookingDraft = typeof pujaId === "string" && typeof amount === "number" && typeof bookingDate === "string" && typeof bookingTime === "string" && typeof devoteeName === "string";
+
+    if (!hasBookingId && !hasBookingDraft) {
+      console.error("[verify-razorpay-payment] invalid booking context", { bookingId, pujaId, amount, bookingDate, bookingTime, devoteeName });
+      return new Response(JSON.stringify({ error: "Invalid booking context" }), {
         status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
@@ -216,30 +230,69 @@ serve(async (req: Request) => {
       console.error("[verify-razorpay-payment] booking probe threw", probeErr);
     }
 
-    const { data: rpcResult, error: rpcError } = await supabase.rpc("complete_booking_payment", {
-      p_booking_id: bookingId,
-      p_user_id: user.id,
-      p_payment_id: razorpayPaymentId,
-      p_order_id: razorpayOrderId,
-      p_signature: razorpaySignature,
-    });
+    let confirmedBookingId = bookingId ?? null;
 
-    if (rpcError || rpcResult !== true) {
-      console.error("[verify-razorpay-payment] RPC update error", {
-        bookingId,
-        userId: user?.id,
-        rpcError,
-        rpcResult,
+    if (confirmedBookingId) {
+      const { data: rpcResult, error: rpcError } = await supabase.rpc("complete_booking_payment", {
+        p_booking_id: confirmedBookingId,
+        p_user_id: user.id,
+        p_payment_id: razorpayPaymentId,
+        p_order_id: razorpayOrderId,
+        p_signature: razorpaySignature,
       });
 
-      return new Response(JSON.stringify({
-        error: "Failed to update booking",
-        details: rpcError,
-        bookingId,
-        userId: user?.id,
-      }), {
-        status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      if (rpcError || rpcResult !== true) {
+        console.error("[verify-razorpay-payment] RPC update error", {
+          bookingId: confirmedBookingId,
+          userId: user?.id,
+          rpcError,
+          rpcResult,
+        });
+
+        return new Response(JSON.stringify({
+          error: "Failed to update booking",
+          details: rpcError,
+          bookingId: confirmedBookingId,
+          userId: user?.id,
+        }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    } else {
+      const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
+      const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
+      const safeName = devoteeName.trim().slice(0, 100);
+
+      const { data: insertedBooking, error: insertError } = await supabase
+        .from("puja_bookings")
+        .insert({
+          user_id: user.id,
+          puja_id: pujaId,
+          booking_date: bookingDate,
+          booking_time: bookingTime,
+          devotee_name: safeName,
+          devotee_gotra: safeGotra,
+          special_instructions: safeInstructions,
+          amount: amount,
+          payment_status: "paid",
+          booking_status: "confirmed",
+          payment_id: razorpayPaymentId,
+          razorpay_order_id: razorpayOrderId,
+          razorpay_signature: razorpaySignature,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (insertError || !insertedBooking) {
+        console.error("[verify-razorpay-payment] booking insert error", { insertError });
+        return new Response(JSON.stringify({ error: "Failed to create confirmed booking" }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      confirmedBookingId = insertedBooking.id;
     }
 
     console.log("[verify-razorpay-payment] booking marked paid", {

@@ -4,8 +4,16 @@ import { toast } from "sonner";
 export const useBookingEmail = () => {
   const sendConfirmationEmail = async (bookingId: string) => {
     try {
+      // Ensure we send the anon/publishable key and (if available) the user's access token
+      const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
       const { data, error } = await supabase.functions.invoke("send-booking-email", {
         body: { bookingId, type: "confirmation" },
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          apikey,
+        },
       });
 
       if (error) {
@@ -24,8 +32,15 @@ export const useBookingEmail = () => {
 
   const sendReminderEmail = async (bookingId: string) => {
     try {
+      const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
       const { data, error } = await supabase.functions.invoke("send-booking-email", {
         body: { bookingId, type: "reminder" },
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          apikey,
+        },
       });
 
       if (error) {
