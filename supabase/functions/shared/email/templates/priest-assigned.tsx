@@ -2,6 +2,9 @@ import React from "https://esm.sh/react@18.3.1";
 import { EmailButton } from "../button.tsx";
 import { EmailLayout } from "../layout.tsx";
 import { cardStyle } from "../styles.ts";
+import { getFrontendUrl } from "../utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export interface PriestAssignedEmailProps {
   recipientName?: string;
@@ -18,7 +21,7 @@ export const PriestAssignedEmail = ({ recipientName = "Devotee", priestName = "P
         <div style={{ fontWeight: 700, color: "#B8860B", marginBottom: "10px" }}>{pujaName}</div>
         <div>🙏 Assigned Priest: {priestName}</div>
       </div>
-      <EmailButton href="https://kailashmahadev.in/bookings" label="View Booking Schedule" />
+      <EmailButton href={`${siteUrl}/bookings`} label="View Booking Schedule" />
     </div>
   </EmailLayout>
 );

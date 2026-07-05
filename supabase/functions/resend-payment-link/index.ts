@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail, PaymentLinkEmail } from "../shared/email/index.ts";
+import { getFrontendUrl } from "../shared/email/utils.ts";
 
 const getCorsHeaders = (origin: string | null) => ({
   "Access-Control-Allow-Origin": origin || "*",
@@ -112,8 +113,7 @@ serve(async (req: Request) => {
     }
 
     // Build frontend pay URL (point to booking page with orderId and bookingId)
-    const frontendUrl = (globalThis as any).Deno?.env?.get("FRONTEND_URL") || "https://kailashmahadev.in";
-    const payUrl = `${frontendUrl}/pay?bookingId=${booking.id}&orderId=${razor.id}`;
+    const payUrl = `${getFrontendUrl()}/pay?bookingId=${booking.id}&orderId=${razor.id}`;
 
     // Send email using shared sendEmail helper
     try {

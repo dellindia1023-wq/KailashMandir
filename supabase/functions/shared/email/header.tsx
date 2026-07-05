@@ -1,5 +1,8 @@
 import React from "https://esm.sh/react@18.3.1";
 import { emailTheme } from "./styles.ts";
+import { getFrontendUrl } from "./utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export const EmailHeader = () => (
   <div
@@ -12,6 +15,6 @@ export const EmailHeader = () => (
   >
     <div style={{ fontSize: "42px", marginBottom: "8px" }}>🕉️</div>
     <div style={{ fontSize: "26px", fontWeight: 700, marginBottom: "6px" }}>Kailash Mandir Agra</div>
-    <div style={{ fontSize: "14px", opacity: 0.9 }}>Official website: kailashmahadev.in</div>
+    <div style={{ fontSize: "14px", opacity: 0.9 }}>Official website: {siteUrl.replace(/^https?:\/\//, "")}</div>
   </div>
 );

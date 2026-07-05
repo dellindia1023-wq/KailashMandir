@@ -2,6 +2,9 @@ import React from "https://esm.sh/react@18.3.1";
 import { EmailButton } from "../button.tsx";
 import { EmailLayout } from "../layout.tsx";
 import { cardStyle } from "../styles.ts";
+import { getFrontendUrl } from "../utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export interface ContactAutoReplyProps {
   recipientName?: string;
@@ -15,7 +18,7 @@ export const ContactAutoReply = ({ recipientName = "Devotee" }: ContactAutoReply
       <div style={cardStyle as React.CSSProperties}>
         <p style={{ margin: 0 }}>For urgent requests, please contact the temple office directly on the number below.</p>
       </div>
-      <EmailButton href="https://kailashmahadev.in/contact" label="Return to Contact Page" />
+      <EmailButton href={`${siteUrl}/contact`} label="Return to Contact Page" />
     </div>
   </EmailLayout>
 );

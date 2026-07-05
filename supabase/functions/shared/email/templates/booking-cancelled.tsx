@@ -2,6 +2,9 @@ import React from "https://esm.sh/react@18.3.1";
 import { EmailButton } from "../button.tsx";
 import { EmailLayout } from "../layout.tsx";
 import { cardStyle } from "../styles.ts";
+import { getFrontendUrl } from "../utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export interface BookingCancelledEmailProps {
   recipientName?: string;
@@ -18,7 +21,7 @@ export const BookingCancelledEmail = ({ recipientName = "Devotee", pujaName = "P
         <div style={{ fontWeight: 700, color: "#B8860B", marginBottom: "10px" }}>{pujaName}</div>
         {refundNote ? <div>{refundNote}</div> : <div>Please contact the temple office if you need assistance.</div>}
       </div>
-      <EmailButton href="https://kailashmahadev.in/contact" label="Contact Temple Support" />
+      <EmailButton href={`${siteUrl}/contact`} label="Contact Temple Support" />
     </div>
   </EmailLayout>
 );

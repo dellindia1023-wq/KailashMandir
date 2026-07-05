@@ -2,6 +2,9 @@ import React from "https://esm.sh/react@18.3.1";
 import { EmailButton } from "../button.tsx";
 import { EmailLayout } from "../layout.tsx";
 import { cardStyle } from "../styles.ts";
+import { getFrontendUrl } from "../utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export interface DonationReceiptEmailProps {
   recipientName?: string;
@@ -20,7 +23,7 @@ export const DonationReceiptEmail = ({ recipientName = "Devotee", amount = 0, do
         <div>💰 Amount: ₹{amount.toLocaleString("en-IN")}</div>
         {referenceCode ? <div>🧾 Receipt ID: {referenceCode}</div> : null}
       </div>
-      <EmailButton href="https://kailashmahadev.in/donation" label="Continue Supporting the Temple" />
+      <EmailButton href={`${siteUrl}/donation`} label="Continue Supporting the Temple" />
     </div>
   </EmailLayout>
 );

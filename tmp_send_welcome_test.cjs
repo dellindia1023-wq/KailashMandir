@@ -1,6 +1,6 @@
 const { createClient } = require('./node_modules/@supabase/supabase-js/dist/index.cjs');
 const url = 'https://vgqqcafrkydpothcvtan.supabase.co';
-const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmaHBwdGZndmJlaHdlZnRmbXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MDQyMjUsImV4cCI6MjA4NTA4MDIyNX0.KwTAtrxdPIPSEr-nu2puHXHvRsJj84Vh3U3FNraZcpU';
+const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZncXFjYWZya3lkcG90aGN2dGFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3Mjg4NzgsImV4cCI6MjA5NzMwNDg3OH0.kS_S-EP0Bml_X7kampNYyGiKAn1bkscIMenDtFo5vgk';
 const supabase = createClient(url, key);
 
 (async () => {

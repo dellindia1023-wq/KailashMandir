@@ -8,7 +8,10 @@ export interface PasswordResetEmailProps {
   resetUrl?: string;
 }
 
-export const PasswordResetEmail = ({ recipientName = "Devotee", resetUrl = "https://kailashmahadev.in/reset-password" }: PasswordResetEmailProps) => (
+import { getFrontendUrl } from "../utils.ts";
+const siteUrl = getFrontendUrl();
+
+export const PasswordResetEmail = ({ recipientName = "Devotee", resetUrl = `${siteUrl}/reset-password` }: PasswordResetEmailProps) => (
   <EmailLayout title="Reset Your Password" previewText="Use the secure link below to reset your temple account password.">
     <div>
       <p style={{ margin: "0 0 12px" }}>Namaste {recipientName},</p>

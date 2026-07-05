@@ -1,5 +1,8 @@
 import React from "https://esm.sh/react@18.3.1";
 import { emailTheme, footerLinkStyle } from "./styles.ts";
+import { getFrontendUrl } from "./utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export const EmailFooter = () => (
   <div
@@ -16,7 +19,7 @@ export const EmailFooter = () => (
     <div>Sikandra</div>
     <div>Agra</div>
     <div>Uttar Pradesh 282007</div>
-    <div>Website: <a href="https://kailashmahadev.in" style={footerLinkStyle as React.CSSProperties}>kailashmahadev.in</a></div>
+    <div>Website: <a href={siteUrl} style={footerLinkStyle as React.CSSProperties}>{siteUrl.replace(/^https?:\/\//, "")}</a></div>
     <div>Email: kailashmahadevagra@gmail.com</div>
     <div style={{ marginTop: "10px" }}>
       <a href="https://www.facebook.com" style={footerLinkStyle as React.CSSProperties}>Facebook</a>

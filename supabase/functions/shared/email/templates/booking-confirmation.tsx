@@ -2,7 +2,9 @@ import React from "https://esm.sh/react@18.3.1";
 import { EmailButton } from "../button.tsx";
 import { EmailLayout } from "../layout.tsx";
 import { cardStyle } from "../styles.ts";
-import { formatDate, formatTime } from "../utils.ts";
+import { formatDate, formatTime, getFrontendUrl } from "../utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export interface BookingConfirmationEmailProps {
   recipientName?: string;
@@ -25,7 +27,7 @@ export const BookingConfirmationEmail = ({ recipientName = "Devotee", pujaName =
         {typeof amount === "number" ? <div>💰 Amount: ₹{amount.toLocaleString("en-IN")}</div> : null}
         {referenceCode ? <div>🧾 Reference: {referenceCode}</div> : null}
       </div>
-      <EmailButton href="https://kailashmahadev.in/bookings" label="View Booking Details" />
+      <EmailButton href={`${siteUrl}/bookings`} label="View Booking Details" />
     </div>
   </EmailLayout>
 );

@@ -2,7 +2,9 @@ import React from "https://esm.sh/react@18.3.1";
 import { EmailButton } from "../button.tsx";
 import { EmailLayout } from "../layout.tsx";
 import { cardStyle } from "../styles.ts";
-import { formatDate, formatTime } from "../utils.ts";
+import { formatDate, formatTime, getFrontendUrl } from "../utils.ts";
+
+const siteUrl = getFrontendUrl();
 
 export interface BookingReminderEmailProps {
   recipientName?: string;
@@ -21,7 +23,7 @@ export const BookingReminderEmail = ({ recipientName = "Devotee", pujaName = "Pu
         <div>📅 Date: {formatDate(bookingDate)}</div>
         <div>⏰ Time: {formatTime(bookingTime)}</div>
       </div>
-      <EmailButton href="https://kailashmahadev.in/bookings" label="View Reminder Details" />
+      <EmailButton href={`${siteUrl}/bookings`} label="View Reminder Details" />
     </div>
   </EmailLayout>
 );

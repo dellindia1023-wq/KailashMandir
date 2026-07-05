@@ -8,7 +8,10 @@ export interface VerifyEmailProps {
   verificationUrl?: string;
 }
 
-export const VerifyEmail = ({ recipientName = "Devotee", verificationUrl = "https://kailashmahadev.in/verify-email" }: VerifyEmailProps) => (
+import { getFrontendUrl } from "../utils.ts";
+const siteUrl = getFrontendUrl();
+
+export const VerifyEmail = ({ recipientName = "Devotee", verificationUrl = `${siteUrl}/verify-email` }: VerifyEmailProps) => (
   <EmailLayout title="Verify Your Email" previewText="Verify your email address to secure your temple account.">
     <div>
       <p style={{ margin: "0 0 12px" }}>Namaste {recipientName},</p>

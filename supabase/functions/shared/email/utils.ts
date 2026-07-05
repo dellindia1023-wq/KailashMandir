@@ -170,6 +170,21 @@ export const formatDate = (value: string | Date | undefined, locale: string = "e
   });
 };
 
+const normalizeFrontendUrl = (value: string) => {
+  const trimmed = value.replace(/\/$/, "").trim();
+  if (/^https?:\/\/(www\.)?kailashmahadevtemple\.com$/i.test(trimmed)) {
+    return "https://kailashmahadev.in";
+  }
+  return trimmed;
+};
+
+export const getFrontendUrl = () => {
+  const defaultUrl = "https://kailashmahadev.in";
+  const frontendUrl = getDenoEnv("FRONTEND_URL")?.trim();
+  if (frontendUrl) return normalizeFrontendUrl(frontendUrl);
+  return defaultUrl;
+};
+
 export const formatTime = (value: string | undefined) => {
   if (!value) return "—";
   const [hours, minutes] = value.split(":");
