@@ -17,6 +17,14 @@ const getYouTubeEmbedUrl = (href: string): string | null => {
   return `https://www.youtube.com/embed/${match[1]}?rel=0&showinfo=0`;
 };
 
+const slugifyHeading = (text: string) =>
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
 const isVideoUrl = (href: string): boolean => {
   return VIDEO_EXTENSIONS.some((ext) => href.toLowerCase().endsWith(ext));
 };
@@ -74,7 +82,8 @@ const convertMarkdownToHtml = (content: string) => {
     if (/^#{1,6}\s+/.test(line)) {
       const level = line.match(/^#+/)?.[0].length ?? 1;
       const heading = line.replace(/^#{1,6}\s+/, "");
-      htmlBlocks.push(`<h${level} class="mt-8 scroll-mt-24 text-${level === 1 ? "3xl" : level === 2 ? "2xl" : level === 3 ? "xl" : "lg"} font-semibold tracking-tight">${renderInlineMarkdown(heading)}</h${level}>`);
+      const headingId = slugifyHeading(heading);
+      htmlBlocks.push(`<h${level} id="${headingId}" class="mt-8 scroll-mt-24 text-${level === 1 ? "3xl" : level === 2 ? "2xl" : level === 3 ? "xl" : "lg"} font-semibold tracking-tight">${renderInlineMarkdown(heading)}</h${level}>`);
       index += 1;
       continue;
     }

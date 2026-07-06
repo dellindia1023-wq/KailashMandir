@@ -70,6 +70,7 @@ const AdminDarshanSchedule = lazy(() => import("./pages/admin/AdminDarshanSchedu
 // Lazy-loaded blog and knowledge hub pages
 const BlogPage = lazy(() => import("./pages/BlogPage"));
 const BlogDetailPage = lazy(() => import("./pages/BlogDetailPage"));
+const AuthorProfilePage = lazy(() => import("./pages/AuthorProfilePage"));
 const KnowledgeHubPage = lazy(() => import("./pages/KnowledgeHubPage"));
 
 // Lazy-loaded priest pages
@@ -115,6 +116,7 @@ const routeDefinitions: RouteObject[] = [
   { path: "/social", element: <SocialPostsPage /> },
   { path: "/blogs", element: <BlogPage /> },
   { path: "/blog/:slug", element: <BlogDetailPage /> },
+  { path: "/author/:slug", element: <AuthorProfilePage /> },
   { path: "/knowledge-hub", element: <KnowledgeHubPage /> },
 
   {

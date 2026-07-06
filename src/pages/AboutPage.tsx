@@ -324,7 +324,7 @@ const AboutPage = () => {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { name: "Shri Ramesh Giri Ji", role: "Chairman", desc: "Overseeing temple development & community service since 1995" },
+                  { name: "Shri  Giri Ji", role: "Chairman", desc: "Overseeing temple development & community service since 1995" },
                   { name: "Mahant Shri Subhash Giri Ji", role: "Secretary", desc: "Managing daily operations, devotee services & event coordination" },
                   { name: "Mahant Shri Nirmal Giri Ji", role: "Treasurer", desc: "Financial management, donations & temple fund allocation" },
                 ].map((member, i) => (
