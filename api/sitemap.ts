@@ -60,10 +60,19 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-    );
+    const supabaseUrl =
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.VITE_SUPABASE_URL ||
+      "";
+    const supabaseAnonKey =
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      "";
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Fetch all published blogs
     const { data: blogs, error: blogsError } = await supabase
@@ -96,6 +105,13 @@ export default async function handler(req: any, res: any) {
       priority: "0.80",
     }));
 
+    const knowledgeArticleEntries = (knowledge || []).map((article) => ({
+      loc: `${BASE_URL}/knowledge-hub?article=${encodeURIComponent(article.id)}`,
+      lastmod: formatDate(article.updated_at),
+      changefreq: "weekly" as const,
+      priority: "0.75",
+    }));
+
     // Add blog listing page
     const blogListEntry = {
       loc: `${BASE_URL}/blogs`,
@@ -118,6 +134,7 @@ export default async function handler(req: any, res: any) {
       blogListEntry,
       knowledgeHubEntry,
       ...blogEntries,
+      ...knowledgeArticleEntries,
     ];
 
     // Generate XML
