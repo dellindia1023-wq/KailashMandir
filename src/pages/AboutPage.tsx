@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { normalizeRitualItems } from "@/lib/aboutPageContent";
 
 const AboutPage = () => {
   const { t } = useLanguage();
@@ -53,6 +54,7 @@ const AboutPage = () => {
   ];
 
   const [aboutData, setAboutData] = useState<any | null>(null);
+  const ritualItems = normalizeRitualItems(aboutData?.rituals);
 
   useEffect(() => {
     let mounted = true;
@@ -418,37 +420,31 @@ const AboutPage = () => {
               </p>
             </div>
             <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(aboutData?.rituals?.length ? aboutData.rituals : [
-                { time: "4:00 AM", name: "Mangla Aarti", icon: Moon, desc: "The first aarti of the day, performed in the sacred pre-dawn hours. The temple resonates with the sound of bells and conch shells.", special: true },
-                { time: "4:30 AM", name: "Abhishek & Shringar", icon: Sparkles, desc: "The sacred Shivling is bathed with milk, honey, curd, ghee, and gangajal, followed by elaborate decoration.", special: false },
-                { time: "5:00 AM", name: "Shringar Darshan", icon: Sunrise, desc: "First darshan of the day where devotees witness the beautifully adorned Shivling with flowers and chandan.", special: false },
-                { time: "7:30 AM", name: "Bhog Aarti", icon: Sun, desc: "Morning bhog (food offering) is prepared and offered to Lord Shiva with devotional hymns.", special: false },
-                { time: "12:00 PM", name: "Raj Bhog Aarti", icon: Sun, desc: "The grand midday aarti with elaborate bhog offering. Temple doors close after this for afternoon rest.", special: true },
-                { time: "4:00 PM", name: "Temple Reopens", icon: Clock, desc: "Evening darshan begins. Devotees gather for the sacred evening atmosphere.", special: false },
-                { time: "7:30 PM", name: "Sandhya Aarti", icon: Sunset, desc: "The most attended aarti of the day. Hundreds of diyas are lit creating a mesmerizing divine atmosphere.", special: true },
-                { time: "9:00 PM", name: "Shayan Aarti", icon: Moon, desc: "The final aarti of the day. Lord Shiva is offered rest for the night with lullaby bhajans.", special: false },
-              ]).map((ritual, i) => (
-                <Card key={i} className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${ritual.special ? "border-gold/30 bg-gold/5" : "border-border"}`}>
-                  <CardContent className="p-4 flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${ritual.special ? "bg-gold/20" : "bg-primary/10"}`}>
-                      <ritual.icon className={`h-5 w-5 ${ritual.special ? "text-gold" : "text-primary"}`} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`font-heading font-bold text-sm ${ritual.special ? "text-gold" : "text-primary"}`}>{ritual.time}</span>
-                        {ritual.special && (
-                          <Badge className="bg-gold/20 text-gold border-gold/30 text-[10px] px-1.5">
-                            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
-                            Special
-                          </Badge>
-                        )}
+              {ritualItems.map((ritual: any, i: number) => {
+                const IconComponent = ritual.icon || Moon;
+                return (
+                  <Card key={i} className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${ritual.special ? "border-gold/30 bg-gold/5" : "border-border"}`}>
+                    <CardContent className="p-4 flex items-start gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${ritual.special ? "bg-gold/20" : "bg-primary/10"}`}>
+                        <IconComponent className={`h-5 w-5 ${ritual.special ? "text-gold" : "text-primary"}`} />
                       </div>
-                      <h4 className="font-heading font-semibold text-foreground text-sm mb-1">{ritual.name}</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{ritual.desc}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`font-heading font-bold text-sm ${ritual.special ? "text-gold" : "text-primary"}`}>{ritual.time}</span>
+                          {ritual.special && (
+                            <Badge className="bg-gold/20 text-gold border-gold/30 text-[10px] px-1.5">
+                              <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                              Special
+                            </Badge>
+                          )}
+                        </div>
+                        <h4 className="font-heading font-semibold text-foreground text-sm mb-1">{ritual.name}</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{ritual.desc}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
             <div className="text-center mt-8">
               <Link to="/darshan-timings">
