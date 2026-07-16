@@ -25,6 +25,8 @@ import {
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 const AboutPage = () => {
   const { t } = useLanguage();
@@ -49,6 +51,22 @@ const AboutPage = () => {
     { icon: BookOpen, title: t("about.archFeature1"), desc: t("about.archNote") },
     { icon: Sparkles, title: t("about.shivlingBelief4"), desc: t("about.mythConclusion") },
   ];
+
+  const [aboutData, setAboutData] = useState<any | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data } = await supabase.from("about_settings").select("*").maybeSingle();
+        if (mounted && data) setAboutData(data);
+      } catch (err) {
+        // silent fallback to static content
+        console.error("Failed to load about_settings:", err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const mythSteps = [
     t("about.mythStep1"),
@@ -152,10 +170,10 @@ const AboutPage = () => {
       <Header />
       <main>
         <PageHeroBanner
-          image={templeHero}
-          title={t("about.title")}
-          highlight={t("about.titleHighlight")}
-          subtitle={t("about.description2")}
+          image={aboutData?.hero_image_url || templeHero}
+          title={aboutData?.hero_title || t("about.title")}
+          highlight={aboutData?.hero_subtitle || t("about.titleHighlight")}
+          subtitle={aboutData?.hero_subtitle || t("about.description2")}
           mantra="ॐ नमः शिवाय"
         />
 
@@ -323,16 +341,16 @@ const AboutPage = () => {
                 Temple Trust Committee
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
+                {(aboutData?.trust_committee?.length ? aboutData.trust_committee : [
                   { name: "Shri  Giri Ji", role: "Chairman", desc: "Overseeing temple development & community service since 1995" },
                   { name: "Mahant Shri Subhash Giri Ji", role: "Secretary", desc: "Managing daily operations, devotee services & event coordination" },
                   { name: "Mahant Shri Nirmal Giri Ji", role: "Treasurer", desc: "Financial management, donations & temple fund allocation" },
-                ].map((member, i) => (
+                ]).map((member: any, i: number) => (
                   <Card key={i} className="border-gold/10 hover:shadow-lg transition-all duration-300">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-12 h-12 rounded-full bg-gradient-saffron flex items-center justify-center">
-                          <User className="h-6 w-6 text-primary-foreground" />
+                          {member.photo ? <img src={member.photo} alt={member.name} className="w-10 h-10 rounded-full object-cover" /> : <User className="h-6 w-6 text-primary-foreground" />}
                         </div>
                         <div>
                           <p className="font-heading font-semibold text-foreground text-sm">{member.name}</p>
@@ -353,17 +371,17 @@ const AboutPage = () => {
                 Head Priests (Mahantas)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
+                {(aboutData?.head_priests?.length ? aboutData.head_priests : [
                   { name: "Mahant Chandrakant Giri Ji", exp: "35+ years", specialty: "Rudrabhishek, Laghu Rudra & Vedic rituals", desc: "Head priest conducting major pujas and guiding spiritual ceremonies for devotees from across India." },
                   { name: "Mahant Keshav Giri  Ji", exp: "25+ years", specialty: "Maha Mrityunjaya Jaap & Shiv Chalisa", desc: "Expert in mantra recitation and traditional Shaiva rituals, known for powerful Mrityunjaya ceremonies." },
                   { name: "Mahant Gaurav Giri ji", exp: "20+ years", specialty: "Daily Aarti & Abhishek ceremonies", desc: "Conducts daily worship rituals with devotion, ensuring the sanctum's sacred atmosphere is maintained." },
                   { name: "Mahant Kapil Giri Ji", exp: "15+ years", specialty: "Festival pujas & devotee guidance", desc: "Specializes in festival-specific rituals and provides personalized spiritual guidance to devotees." },
-                ].map((priest, i) => (
+                ]).map((priest: any, i: number) => (
                   <Card key={i} className="border-gold/10 hover:shadow-lg transition-all duration-300">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-12 h-12 rounded-full bg-gradient-saffron flex items-center justify-center">
-                          <span className="text-primary-foreground font-heading text-lg">ॐ</span>
+                          {priest.photo ? <img src={priest.photo} alt={priest.name} className="w-10 h-10 rounded-full object-cover" /> : <span className="text-primary-foreground font-heading text-lg">ॐ</span>}
                         </div>
                         <div>
                           <p className="font-heading font-semibold text-foreground text-sm">{priest.name}</p>
@@ -400,7 +418,7 @@ const AboutPage = () => {
               </p>
             </div>
             <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
+              {(aboutData?.rituals?.length ? aboutData.rituals : [
                 { time: "4:00 AM", name: "Mangla Aarti", icon: Moon, desc: "The first aarti of the day, performed in the sacred pre-dawn hours. The temple resonates with the sound of bells and conch shells.", special: true },
                 { time: "4:30 AM", name: "Abhishek & Shringar", icon: Sparkles, desc: "The sacred Shivling is bathed with milk, honey, curd, ghee, and gangajal, followed by elaborate decoration.", special: false },
                 { time: "5:00 AM", name: "Shringar Darshan", icon: Sunrise, desc: "First darshan of the day where devotees witness the beautifully adorned Shivling with flowers and chandan.", special: false },
@@ -409,7 +427,7 @@ const AboutPage = () => {
                 { time: "4:00 PM", name: "Temple Reopens", icon: Clock, desc: "Evening darshan begins. Devotees gather for the sacred evening atmosphere.", special: false },
                 { time: "7:30 PM", name: "Sandhya Aarti", icon: Sunset, desc: "The most attended aarti of the day. Hundreds of diyas are lit creating a mesmerizing divine atmosphere.", special: true },
                 { time: "9:00 PM", name: "Shayan Aarti", icon: Moon, desc: "The final aarti of the day. Lord Shiva is offered rest for the night with lullaby bhajans.", special: false },
-              ].map((ritual, i) => (
+              ]).map((ritual, i) => (
                 <Card key={i} className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${ritual.special ? "border-gold/30 bg-gold/5" : "border-border"}`}>
                   <CardContent className="p-4 flex items-start gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${ritual.special ? "bg-gold/20" : "bg-primary/10"}`}>

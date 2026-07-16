@@ -14,6 +14,7 @@ import templeHero from "@/assets/gallery/devotees-prayer.jpg";
 import { BASE_URL } from "@/constants/seo";
 import { buildContentAutomationMetadata, buildKnowledgeContentMetadata } from "@/lib/contentSeo";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import ImageShimmer from "@/components/ImageShimmer";
 
 export default function KnowledgeHubPage() {
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
@@ -120,6 +121,8 @@ export default function KnowledgeHubPage() {
         subtitle="Find answers to your questions about Kailash Mahadev Temple"
         mantra="ॐ नमः शिवाय"
       />
+
+      <ImageShimmer />
 
       <main>
         <TempleDivider />

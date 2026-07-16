@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import RouteCache from "./components/RouteCache";
 import ScrollRestoration from "./components/ScrollRestoration";
 import MobileBottomNav from "./components/MobileBottomNav";
+import ImageShimmer from "@/components/ImageShimmer";
 
 // Lazy-loaded public pages
 const Install = lazy(() => import("./pages/Install"));
@@ -65,6 +66,7 @@ const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
 const AdminBlogsPage = lazy(() => import("./pages/admin/AdminBlogsPage"));
 const AdminKnowledgeHubPage = lazy(() => import("./pages/admin/AdminKnowledgeHubPage"));
+const AdminAboutPage = lazy(() => import("./pages/admin/AdminAboutPage"));
 const AdminDarshanSchedule = lazy(() => import("./pages/admin/AdminDarshanSchedule"));
 
 // Lazy-loaded blog and knowledge hub pages
@@ -148,6 +150,7 @@ const routeDefinitions: RouteObject[] = [
       { path: "gallery", element: <AdminGallery /> },
       { path: "blogs", element: <AdminBlogsPage /> },
       { path: "knowledge-hub", element: <AdminKnowledgeHubPage /> },
+      { path: "about", element: <AdminAboutPage /> },
       { path: "users", element: <AdminUsers /> },
       { path: "inventory", element: <AdminInventory /> },
       { path: "settings", element: <AdminSettings /> },
@@ -180,6 +183,7 @@ const App = () => (
           <Suspense fallback={<PageLoader />}>
             <RouteCache routes={routeDefinitions} />
           </Suspense>
+          <ImageShimmer />
           <Suspense fallback={null}>
             <StickyNoticeBanner />
             <FloatingLanguageButton />

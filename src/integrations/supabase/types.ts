@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -10,10 +10,88 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      aarti_schedule: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string
+          id: string
+          is_active: boolean | null
+          is_special: boolean | null
+          name: string
+          order: number | null
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          is_special?: boolean | null
+          name: string
+          order?: number | null
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          is_special?: boolean | null
+          name?: string
+          order?: number | null
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      about_settings: {
+        Row: {
+          created_at: string | null
+          head_priests: Json | null
+          hero_image_url: string | null
+          hero_subtitle: string | null
+          hero_title: string | null
+          id: string
+          is_active: boolean | null
+          rituals: Json | null
+          trust_committee: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          head_priests?: Json | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
+          id?: string
+          is_active?: boolean | null
+          rituals?: Json | null
+          trust_committee?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          head_priests?: Json | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
+          id?: string
+          is_active?: boolean | null
+          rituals?: Json | null
+          trust_committee?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -40,6 +118,170 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      blog_categories: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      blog_tag_relationships: {
+        Row: {
+          blog_id: string
+          tag_id: string
+        }
+        Insert: {
+          blog_id: string
+          tag_id: string
+        }
+        Update: {
+          blog_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_tag_relationships_blog_id_fkey"
+            columns: ["blog_id"]
+            isOneToOne: false
+            referencedRelation: "blogs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_tag_relationships_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "blog_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_tags: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      blogs: {
+        Row: {
+          category_id: string | null
+          content: string
+          created_at: string | null
+          created_by: string | null
+          excerpt: string | null
+          featured_image_caption: string | null
+          featured_image_url: string | null
+          featured_video_url: string | null
+          id: string
+          image_alt: string | null
+          is_featured: boolean | null
+          published_at: string | null
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          slug: string
+          status: string | null
+          title: string
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          category_id?: string | null
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          excerpt?: string | null
+          featured_image_caption?: string | null
+          featured_image_url?: string | null
+          featured_video_url?: string | null
+          id?: string
+          image_alt?: string | null
+          is_featured?: boolean | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          category_id?: string | null
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          excerpt?: string | null
+          featured_image_caption?: string | null
+          featured_image_url?: string | null
+          featured_video_url?: string | null
+          id?: string
+          image_alt?: string | null
+          is_featured?: boolean | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blogs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       darshan_schedule: {
         Row: {
@@ -83,6 +325,7 @@ export type Database = {
           status: string
           tier: string
           transaction_id: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -93,6 +336,7 @@ export type Database = {
           status?: string
           tier?: string
           transaction_id?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -103,7 +347,47 @@ export type Database = {
           status?: string
           tier?: string
           transaction_id?: string | null
+          updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      email_delivery_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          provider: string
+          provider_message_id: string | null
+          provider_response: string | null
+          recipient: string
+          status: string
+          subject: string | null
+          template_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider?: string
+          provider_message_id?: string | null
+          provider_response?: string | null
+          recipient: string
+          status: string
+          subject?: string | null
+          template_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider?: string
+          provider_message_id?: string | null
+          provider_response?: string | null
+          recipient?: string
+          status?: string
+          subject?: string | null
+          template_name?: string
         }
         Relationships: []
       }
@@ -247,6 +531,114 @@ export type Database = {
           title?: string
           updated_at?: string
           uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      homepage_settings: {
+        Row: {
+          announcement: string | null
+          announcement_enabled: boolean
+          created_at: string
+          created_by: string | null
+          daily_devotees: number
+          days_open: number
+          hero_button_link: string
+          hero_button_text: string
+          hero_image_url: string | null
+          hero_images: Json | null
+          hero_subtitle: string
+          hero_title: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          years_of_heritage: number
+        }
+        Insert: {
+          announcement?: string | null
+          announcement_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          daily_devotees?: number
+          days_open?: number
+          hero_button_link?: string
+          hero_button_text?: string
+          hero_image_url?: string | null
+          hero_images?: Json | null
+          hero_subtitle?: string
+          hero_title?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          years_of_heritage?: number
+        }
+        Update: {
+          announcement?: string | null
+          announcement_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          daily_devotees?: number
+          days_open?: number
+          hero_button_link?: string
+          hero_button_text?: string
+          hero_image_url?: string | null
+          hero_images?: Json | null
+          hero_subtitle?: string
+          hero_title?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          years_of_heritage?: number
+        }
+        Relationships: []
+      }
+      knowledge_articles: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string | null
+          created_by: string | null
+          featured_video_url: string | null
+          id: string
+          is_featured: boolean | null
+          question: string
+          search_keywords: string | null
+          seo_description: string | null
+          seo_keywords_field: string | null
+          seo_title: string | null
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          answer: string
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          featured_video_url?: string | null
+          id?: string
+          is_featured?: boolean | null
+          question: string
+          search_keywords?: string | null
+          seo_description?: string | null
+          seo_keywords_field?: string | null
+          seo_title?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          featured_video_url?: string | null
+          id?: string
+          is_featured?: boolean | null
+          question?: string
+          search_keywords?: string | null
+          seo_description?: string | null
+          seo_keywords_field?: string | null
+          seo_title?: string | null
+          updated_at?: string | null
+          view_count?: number | null
         }
         Relationships: []
       }
@@ -648,36 +1040,108 @@ export type Database = {
       saved_kundlis: {
         Row: {
           birth_date: string
+          birth_latitude: number | null
+          birth_longitude: number | null
           birth_name: string | null
           birth_place: string
           birth_time: string
+          career: string | null
           created_at: string
+          current_antardasha: string | null
+          current_mahadasha: string | null
+          health: string | null
           id: string
+          is_shared: boolean | null
+          kal_sarp_dosha: Json | null
           kundli_data: Json
+          lagna: string | null
+          lucky_colors: Json | null
+          lucky_gems: Json | null
+          lucky_numbers: Json | null
+          mangal_dosha: Json | null
+          marriage: string | null
+          nakshatra: string | null
+          personality: string | null
+          planets: Json | null
+          rashi: string | null
+          raw_response: Json | null
+          recommended_pujas: Json | null
+          remedies: Json | null
+          sadhesati: Json | null
+          shared_with: Json | null
+          source: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           birth_date: string
+          birth_latitude?: number | null
+          birth_longitude?: number | null
           birth_name?: string | null
           birth_place: string
           birth_time: string
+          career?: string | null
           created_at?: string
+          current_antardasha?: string | null
+          current_mahadasha?: string | null
+          health?: string | null
           id?: string
+          is_shared?: boolean | null
+          kal_sarp_dosha?: Json | null
           kundli_data: Json
+          lagna?: string | null
+          lucky_colors?: Json | null
+          lucky_gems?: Json | null
+          lucky_numbers?: Json | null
+          mangal_dosha?: Json | null
+          marriage?: string | null
+          nakshatra?: string | null
+          personality?: string | null
+          planets?: Json | null
+          rashi?: string | null
+          raw_response?: Json | null
+          recommended_pujas?: Json | null
+          remedies?: Json | null
+          sadhesati?: Json | null
+          shared_with?: Json | null
+          source?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
           birth_date?: string
+          birth_latitude?: number | null
+          birth_longitude?: number | null
           birth_name?: string | null
           birth_place?: string
           birth_time?: string
+          career?: string | null
           created_at?: string
+          current_antardasha?: string | null
+          current_mahadasha?: string | null
+          health?: string | null
           id?: string
+          is_shared?: boolean | null
+          kal_sarp_dosha?: Json | null
           kundli_data?: Json
+          lagna?: string | null
+          lucky_colors?: Json | null
+          lucky_gems?: Json | null
+          lucky_numbers?: Json | null
+          mangal_dosha?: Json | null
+          marriage?: string | null
+          nakshatra?: string | null
+          personality?: string | null
+          planets?: Json | null
+          rashi?: string | null
+          raw_response?: Json | null
+          recommended_pujas?: Json | null
+          remedies?: Json | null
+          sadhesati?: Json | null
+          shared_with?: Json | null
+          source?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -710,6 +1174,46 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_admin_role: {
+        Args: { _email?: string; _user_id: string }
+        Returns: Json
+      }
+      complete_booking_payment: {
+        Args: {
+          p_booking_id: string
+          p_order_id: string
+          p_payment_id: string
+          p_signature: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      complete_donation_payment: {
+        Args: { p_donation_id: string; p_payment_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      create_or_update_super_admin: {
+        Args: { _email: string; _user_id: string }
+        Returns: Json
+      }
+      fail_booking_payment: {
+        Args: { p_booking_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      fail_donation_payment: {
+        Args: { p_donation_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      get_admins: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

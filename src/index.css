@@ -297,3 +297,47 @@
     }
   }
 }
+
+/* Shimmer / skeleton styles for markdown images */
+@layer components {
+  .markdown-figure {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background-color: hsl(0 0% 95% / 1);
+      padding-top: 56.25%;
+      height: 0;
+  }
+
+  .markdown-figure::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, rgba(255,255,255,0.0) 20%, rgba(0,0,0,0.04) 37%, rgba(255,255,255,0.0) 63%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  .markdown-figure.img-loaded::before {
+    display: none;
+  }
+
+  .markdown-img {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+    opacity: 0;
+  }
+
+  .markdown-img.loaded {
+    opacity: 1;
+  }
+
+  .markdown-figure.img-error::before {
+    background: repeating-linear-gradient(45deg, rgba(200,200,200,0.06), rgba(200,200,200,0.06) 10px, rgba(180,180,180,0.03) 10px, rgba(180,180,180,0.03) 20px);
+  }
+}

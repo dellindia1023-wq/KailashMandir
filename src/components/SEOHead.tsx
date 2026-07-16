@@ -176,6 +176,11 @@ const SEOHead = ({
     setLink("me", SOCIAL_LINKS.youtube, "me-youtube");
     setLink("me", SOCIAL_LINKS.twitter, "me-twitter");
 
+    // Preload Open Graph / LCP image to improve LCP and Lighthouse scores
+    if (ogImage) {
+      setLink("preload", ogImage, "preload-og-image", { as: "image", crossorigin: "anonymous" });
+    }
+
     const postalAddress = { "@type": "PostalAddress", ...TEMPLE_ADDRESS };
 
     const graphNodes: Record<string, unknown>[] = [

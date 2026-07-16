@@ -36,11 +36,11 @@ const isImageUrl = (href: string): boolean => {
 const renderInlineMarkdown = (text: string): string => {
   let html = escapeHtml(text);
 
-  html = html.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_match, alt, src, title) => {
+html = html.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_match, alt, src, title) => {
     const safeSrc = escapeHtml(src);
     const safeAlt = escapeHtml(alt || "");
     const safeTitle = title ? ` title="${escapeHtml(title)}"` : "";
-    return `<figure class="my-6"><img src="${safeSrc}" alt="${safeAlt}"${safeTitle} loading="lazy" decoding="async" class="w-full rounded-2xl object-cover" /><figcaption class="mt-2 text-sm text-muted-foreground">${safeAlt || escapeHtml(title || "")}</figcaption></figure>`;
+    return `<figure class="my-6 markdown-figure"><img src="${safeSrc}" alt="${safeAlt}"${safeTitle} loading="lazy" decoding="async" class="markdown-img w-full rounded-2xl object-cover" /><figcaption class="mt-2 text-sm text-muted-foreground">${safeAlt || escapeHtml(title || "")}</figcaption></figure>`;
   });
 
   html = html.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_match, label, href) => {
@@ -54,7 +54,7 @@ const renderInlineMarkdown = (text: string): string => {
       return `<div class="mb-6 overflow-hidden rounded-2xl border border-border bg-black/5"><video src="${safeHref}" controls preload="metadata" data-testid="markdown-video" class="aspect-video w-full object-cover"></video></div>`;
     }
     if (isImageUrl(href)) {
-      return `<figure class="my-6"><img src="${safeHref}" alt="${escapeHtml(safeLabel)}" loading="lazy" decoding="async" class="w-full rounded-2xl object-cover" /></figure>`;
+      return `<figure class="my-6 markdown-figure"><img src="${safeHref}" alt="${escapeHtml(safeLabel)}" loading="lazy" decoding="async" class="markdown-img w-full rounded-2xl object-cover" /></figure>`;
     }
     return `<a href="${safeHref}" target="_blank" rel="noreferrer noopener" class="text-primary underline-offset-4 hover:underline">${escapeHtml(safeLabel)}</a>`;
   });

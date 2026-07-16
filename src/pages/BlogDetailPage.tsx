@@ -11,6 +11,7 @@ import Footer from "@/components/Footer";
 import { BASE_URL } from "@/constants/seo";
 import { buildBlogContentMetadata, buildContentAutomationMetadata } from "@/lib/contentSeo";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import ImageShimmer from "@/components/ImageShimmer";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 export default function BlogDetailPage() {
@@ -347,7 +348,7 @@ export default function BlogDetailPage() {
                       <img
                         src="/placeholder.svg"
                         alt="Kailash Mahadev Temple Agra editorial team"
-                        className="h-14 w-14 rounded-full object-cover"
+                        className="h-14 w-14 rounded-full object-cover markdown-img"
                       />
                       <div>
                         <h2 className="text-xl font-semibold">Kailash Mahadev Temple Agra Editorial Team</h2>
@@ -396,6 +397,7 @@ export default function BlogDetailPage() {
 
                 <div className="prose prose-slate max-w-none dark:prose-invert">
                   <MarkdownContent content={blog.content} />
+                  <ImageShimmer />
                 </div>
 
                 <section className="mt-10 rounded-2xl border border-border/70 bg-card/80 p-6 shadow-sm">
