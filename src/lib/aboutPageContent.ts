@@ -32,3 +32,15 @@ export const normalizeRitualItems = (items: any[] | null | undefined) => {
 
   return normalized.length ? normalized : getDefaultRituals();
 };
+
+export const getVisibleAboutEntries = (items: any[] | null | undefined) => {
+  if (!Array.isArray(items)) return [];
+  return items.filter((item) => {
+    if (!item || typeof item !== "object") return false;
+    const values = Object.values(item as Record<string, unknown>);
+    return values.some((value) => {
+      if (typeof value === "string") return value.trim().length > 0;
+      return value !== null && value !== undefined && value !== false;
+    });
+  });
+};

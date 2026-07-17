@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { normalizeRitualItems } from "@/lib/aboutPageContent";
+import { getVisibleAboutEntries, normalizeRitualItems } from "@/lib/aboutPageContent";
 
 const AboutPage = () => {
   const { t } = useLanguage();
@@ -55,6 +55,8 @@ const AboutPage = () => {
 
   const [aboutData, setAboutData] = useState<any | null>(null);
   const ritualItems = normalizeRitualItems(aboutData?.rituals);
+  const trustCommitteeEntries = getVisibleAboutEntries(aboutData?.trust_committee);
+  const headPriestEntries = getVisibleAboutEntries(aboutData?.head_priests);
 
   useEffect(() => {
     let mounted = true;
@@ -343,11 +345,7 @@ const AboutPage = () => {
                 Temple Trust Committee
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(aboutData?.trust_committee?.length ? aboutData.trust_committee : [
-                  { name: "Shri  Giri Ji", role: "Chairman", desc: "Overseeing temple development & community service since 1995" },
-                  { name: "Mahant Shri Subhash Giri Ji", role: "Secretary", desc: "Managing daily operations, devotee services & event coordination" },
-                  { name: "Mahant Shri Nirmal Giri Ji", role: "Treasurer", desc: "Financial management, donations & temple fund allocation" },
-                ]).map((member: any, i: number) => (
+                {trustCommitteeEntries.length > 0 ? trustCommitteeEntries.map((member: any, i: number) => (
                   <Card key={i} className="border-gold/10 hover:shadow-lg transition-all duration-300">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-3 mb-3">
@@ -362,7 +360,11 @@ const AboutPage = () => {
                       <p className="text-sm text-muted-foreground">{member.desc}</p>
                     </CardContent>
                   </Card>
-                ))}
+                )) : (
+                  <div className="col-span-full rounded-lg border border-dashed border-border/70 bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+                    No trust committee entries have been added yet.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -373,12 +375,7 @@ const AboutPage = () => {
                 Head Priests (Mahantas)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(aboutData?.head_priests?.length ? aboutData.head_priests : [
-                  { name: "Mahant Chandrakant Giri Ji", exp: "35+ years", specialty: "Rudrabhishek, Laghu Rudra & Vedic rituals", desc: "Head priest conducting major pujas and guiding spiritual ceremonies for devotees from across India." },
-                  { name: "Mahant Keshav Giri  Ji", exp: "25+ years", specialty: "Maha Mrityunjaya Jaap & Shiv Chalisa", desc: "Expert in mantra recitation and traditional Shaiva rituals, known for powerful Mrityunjaya ceremonies." },
-                  { name: "Mahant Gaurav Giri ji", exp: "20+ years", specialty: "Daily Aarti & Abhishek ceremonies", desc: "Conducts daily worship rituals with devotion, ensuring the sanctum's sacred atmosphere is maintained." },
-                  { name: "Mahant Kapil Giri Ji", exp: "15+ years", specialty: "Festival pujas & devotee guidance", desc: "Specializes in festival-specific rituals and provides personalized spiritual guidance to devotees." },
-                ]).map((priest: any, i: number) => (
+                {headPriestEntries.length > 0 ? headPriestEntries.map((priest: any, i: number) => (
                   <Card key={i} className="border-gold/10 hover:shadow-lg transition-all duration-300">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-3 mb-3">
@@ -396,7 +393,11 @@ const AboutPage = () => {
                       <p className="text-sm text-muted-foreground">{priest.desc}</p>
                     </CardContent>
                   </Card>
-                ))}
+                )) : (
+                  <div className="col-span-full rounded-lg border border-dashed border-border/70 bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+                    No head priest entries have been added yet.
+                  </div>
+                )}
               </div>
             </div>
           </div>

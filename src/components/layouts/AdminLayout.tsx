@@ -18,15 +18,22 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect regular admins away from Super Admin only pages
   useEffect(() => {
-    if (!adminLoading && isAdmin && !isSuperAdmin) {
-      if (SUPER_ADMIN_ONLY_ROUTES.includes(location.pathname)) {
-        toast.error("Access denied. This section is restricted to Super Admin only.");
-        navigate("/admin", { replace: true });
+    if (authLoading || adminLoading) return;
+    if (!user) return;
+
+    if (!isAdmin) {
+      if (location.pathname.startsWith("/admin")) {
+        navigate("/dashboard", { replace: true });
       }
+      return;
     }
-  }, [adminLoading, isAdmin, isSuperAdmin, location.pathname, navigate]);
+
+    if (!isSuperAdmin && SUPER_ADMIN_ONLY_ROUTES.includes(location.pathname)) {
+      toast.error("Access denied. This section is restricted to Super Admin only.");
+      navigate("/admin", { replace: true });
+    }
+  }, [authLoading, adminLoading, user, isAdmin, isSuperAdmin, location.pathname, navigate]);
 
   // Still loading — show spinner
   if (authLoading || adminLoading) {
@@ -42,11 +49,9 @@ const AdminLayout = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Logged in but not admin — redirect to user dashboard
-  // TEMPORARILY: Allow all users for testing
-  // if (!isAdmin) {
-  //   return <Navigate to="/dashboard" replace />;
-  // }
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   // Block rendering of restricted pages for non-super-admins
   const isRestrictedRoute = SUPER_ADMIN_ONLY_ROUTES.includes(location.pathname);
