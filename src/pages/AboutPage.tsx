@@ -62,11 +62,17 @@ const AboutPage = () => {
     let mounted = true;
     (async () => {
       try {
-        const { data } = await supabase.from("about_settings").select("*").maybeSingle();
-        if (mounted && data) setAboutData(data);
+        const { data, error } = await supabase.from("about_settings").select("*").maybeSingle();
+        if (error && error.code !== "PGRST116") {
+          console.warn("About settings are unavailable right now:", error.message || error);
+        }
+        if (mounted) {
+          setAboutData(data ?? null);
+        }
       } catch (err) {
-        // silent fallback to static content
-        console.error("Failed to load about_settings:", err);
+        if (mounted) {
+          setAboutData(null);
+        }
       }
     })();
     return () => { mounted = false; };

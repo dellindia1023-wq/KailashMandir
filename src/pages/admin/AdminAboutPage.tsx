@@ -22,6 +22,11 @@ interface PersonEntry {
   [key: string]: any;
 }
 
+const normalizePersonEntries = (value: unknown): PersonEntry[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is PersonEntry => !!entry && typeof entry === "object" && !Array.isArray(entry));
+};
+
 export default function AdminAboutPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,8 +46,8 @@ export default function AdminAboutPage() {
       if (error && error.code !== "PGRST116") throw error;
       if (data) {
         setForm(data);
-        setTrustCommittee(Array.isArray(data.trust_committee) ? data.trust_committee : []);
-        setHeadPriests(Array.isArray(data.head_priests) ? data.head_priests : []);
+        setTrustCommittee(normalizePersonEntries(data.trust_committee));
+        setHeadPriests(normalizePersonEntries(data.head_priests));
       } else {
         const empty = { hero_title: "", hero_subtitle: "", hero_image_url: "", trust_committee: [], head_priests: [], rituals: [] };
         setForm(empty);
