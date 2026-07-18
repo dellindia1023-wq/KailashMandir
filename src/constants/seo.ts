@@ -6,7 +6,7 @@ export const SOCIAL_PAGE = `${BASE_URL}/social`;
 
 export const SOCIAL_LINKS = {
   facebook: "https://www.facebook.com/people/Kailash-Mahadev-Agra/61588853954348/",
-  instagram: "https://www.instagram.com/kailash_mahadev.agra",
+  instagram: "https://www.instagram.com/kailashmahadev.in",
   youtube: "https://www.youtube.com/@KailashMahadevAgra",
   twitter: "https://x.com/agra_mahadev",
   social_hub: SOCIAL_PAGE,

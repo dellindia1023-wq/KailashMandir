@@ -4,26 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import templeHero from "@/assets/gallery/devotees-prayer.jpg";
+import { buildHeroSlides, type HeroMediaItem } from "@/lib/homeHeroMedia";
 
 const INTERVAL = 5000;
-
-type HeroMediaItem = {
-  url: string;
-  alt?: string;
-  media_type?: "image" | "video";
-  title?: string;
-  subtitle?: string;
-  button_text?: string;
-  button_link?: string;
-  display_order?: number;
-  active?: boolean;
-};
-
-const getMediaTypeFromUrl = (url: string): "image" | "video" => {
-  const extension = url.split(".").pop()?.split(/[#?]/)[0]?.toLowerCase();
-  if (extension === "mp4" || extension === "webm") return "video";
-  return "image";
-};
 
 const Hero = () => {
   const { t } = useLanguage();
@@ -41,7 +25,8 @@ const Hero = () => {
     daily_devotees: 5000,
     days_open: 365,
   });
-  const [slides, setSlides] = useState<HeroMediaItem[]>([]);
+  const [slides, setSlides] = useState<HeroMediaItem[]>(() => buildHeroSlides(null, templeHero));
+  const [hasLoadedRemoteSettings, setHasLoadedRemoteSettings] = useState(false);
 
   const currentSlide = slides[current];
   const heroTitle = currentSlide?.title || settings.hero_title || t("hero.templeName");
@@ -77,42 +62,18 @@ const Hero = () => {
           days_open: data.days_open || 365,
         });
 
-        const items: HeroMediaItem[] = [];
-        if (data.hero_images && Array.isArray(data.hero_images) && data.hero_images.length > 0) {
-          for (const item of data.hero_images) {
-            if (!item || !item.url) continue;
-            const mediaType = item.media_type || getMediaTypeFromUrl(item.url);
-            items.push({
-              url: item.url,
-              alt: item.alt || "Hero media",
-              media_type: mediaType,
-              title: item.title,
-              subtitle: item.subtitle,
-              button_text: item.button_text,
-              button_link: item.button_link,
-              display_order: item.display_order,
-              active: item.active !== false,
-            });
-          }
-        } else if (data.hero_image_url) {
-          items.push({
-            url: data.hero_image_url,
-            alt: "Hero image",
-            media_type: getMediaTypeFromUrl(data.hero_image_url),
-            active: true,
-          });
-        }
-
-        if (items.length > 0) {
-          const activeItems = items
-            .filter((item) => item.active !== false)
-            .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
-          setSlides(activeItems.length > 0 ? activeItems : items);
-          setCurrent(0);
-        }
+        const slidesFromDb = buildHeroSlides(data, templeHero);
+        setSlides(slidesFromDb);
+        setCurrent(0);
+      } else {
+        setSlides(buildHeroSlides(null, templeHero));
       }
+
+      setHasLoadedRemoteSettings(true);
     } catch (error) {
       console.error("Error loading homepage settings:", error);
+      setSlides(buildHeroSlides(null, templeHero));
+      setHasLoadedRemoteSettings(true);
     }
   };
 

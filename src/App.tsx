@@ -37,6 +37,7 @@ const SocialPostsPage = lazy(() => import("./pages/SocialPostsPage"));
 const StickyNoticeBanner = lazy(() => import("./components/StickyNoticeBanner"));
 const PWAInstallBanner = lazy(() => import("./components/PWAInstallBanner"));
 const FloatingLanguageButton = lazy(() => import("./components/FloatingLanguageButton"));
+const FloatingContactButtons = lazy(() => import("./components/FloatingContactButtons"));
 const AartiReminderBanner = lazy(() => import("./components/AartiReminderBanner"));
 
 // Lazy-loaded user pages
@@ -187,6 +188,7 @@ const App = () => (
           <Suspense fallback={null}>
             <StickyNoticeBanner />
             <FloatingLanguageButton />
+            <FloatingContactButtons />
             <PWAInstallBanner />
             <AartiReminderBanner />
           </Suspense>

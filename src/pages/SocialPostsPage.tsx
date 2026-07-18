@@ -11,13 +11,13 @@ const SocialPostsPage = () => {
     <div className="min-h-screen bg-background">
       <SEOHead
         title="Social Media — Kailash Mahadev Temple Agra (Facebook, Instagram, YouTube, X)"
-        description="Official social media for kailash mandir agra, kailash mahadev, kailash mahadev temple agra — Facebook, Instagram @kailash_mahadev.agra, YouTube @KailashMahadevAgra, X @agra_mahadev. Live darshan & temple updates."
+        description="Official social media for kailash mandir agra, kailash mahadev, kailash mahadev temple agra — Facebook, Instagram @kailashmahadev.in, YouTube @KailashMahadevAgra, X @agra_mahadev. Live darshan & temple updates."
         canonical="/social"
         breadcrumbLabel="Social Media"
         keywords={mergeKeywords(
           "Kailash mandir social media",
           "Facebook Instagram YouTube Twitter",
-          "kailash_mahadev.agra",
+          "kailashmahadev.in",
           "KailashMahadevAgra",
           "agra_mahadev"
         )}
@@ -90,7 +90,7 @@ const SocialPostsPage = () => {
               <div className="aspect-video w-full rounded-xl overflow-hidden bg-muted">
                 <iframe
                   title="Instagram Feed — Kailash Mahadev Temple Agra"
-                  src="https://www.instagram.com/kailash_mahadev.agra/embed"
+                  src="https://www.instagram.com/kailashmahadev.in/embed"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -106,7 +106,7 @@ const SocialPostsPage = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 mt-3 text-sm text-primary hover:underline"
               >
-                @kailash_mahadev.agra <ExternalLink className="h-3 w-3" />
+                @kailashmahadev.in <ExternalLink className="h-3 w-3" />
               </a>
             </article>
 
