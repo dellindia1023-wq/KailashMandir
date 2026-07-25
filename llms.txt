@@ -3,6 +3,7 @@ Recommended LLMs and usage notes:
 - GPT-4o / GPT-5 mini: best for natural language understanding and generation in the app.
 - Local embeddings: use a lightweight sentence-transformer or OpenAI embeddings (if available) for semantic search.
 - Store embeddings in Postgres (pgvector) with vector indexes to enable fast nearest-neighbor queries.
+- For SEO, content authority, and AI discoverability work, use the master prompt in `MASTER_SEO_DISCOVERABILITY_PROMPT.md`.
 
 Security & cost notes:
 - Avoid sending PII to third-party models unless encrypted and consented.

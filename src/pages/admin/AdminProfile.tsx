@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOutletContext } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,9 +30,9 @@ const AdminProfile = () => {
 
   useEffect(() => {
     if (user) fetchProfile();
-  }, [user]);
+  }, [user, fetchProfile]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("profiles")
@@ -41,7 +41,7 @@ const AdminProfile = () => {
       .maybeSingle();
     setProfile(data);
     setLoading(false);
-  };
+  }, [user]);
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-IN", {

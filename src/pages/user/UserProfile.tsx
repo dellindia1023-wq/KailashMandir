@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
@@ -21,13 +21,13 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from("profiles").select("id, full_name, phone, avatar_url").eq("user_id", user.id).maybeSingle();
     setProfile(data); setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchProfile(); }, [user]);
+  useEffect(() => { fetchProfile(); }, [fetchProfile, user]);
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 

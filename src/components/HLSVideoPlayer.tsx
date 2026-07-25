@@ -113,15 +113,15 @@ const HLSVideoPlayer = ({
   // Offline / not live state
   if (!isLive || !streamUrl) {
     return (
-      <div className="relative aspect-video rounded-2xl overflow-hidden border-4 border-gold/30 shadow-2xl bg-maroon">
-        <img src={shivaLingam} alt="Temple Darshan Preview" className="w-full h-full object-cover opacity-40" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-primary-foreground">
-          <div className="w-16 h-16 rounded-full bg-muted/20 border-2 border-primary-foreground/30 flex items-center justify-center">
+      <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background/95 dark:bg-card">
+        <img src={shivaLingam} alt="Temple Darshan Preview" className="w-full h-full object-cover opacity-20" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-foreground">
+          <div className="w-16 h-16 rounded-full bg-muted/20 border-2 border-border/30 flex items-center justify-center">
             <WifiOff className="h-7 w-7" />
           </div>
           <div className="text-center">
             <p className="font-heading text-xl font-bold mb-1">Stream Offline</p>
-            <p className="text-sm text-primary-foreground/70 max-w-xs">
+            <p className="text-sm text-foreground/70 max-w-xs">
               Live darshan is not available right now. Please check back during darshan hours.
             </p>
           </div>
@@ -139,7 +139,7 @@ const HLSVideoPlayer = ({
   if (streamType === "youtube") {
     const ytId = getYouTubeId(streamUrl);
     return (
-      <div ref={containerRef} className="relative aspect-video rounded-2xl overflow-hidden border-4 border-gold/30 shadow-2xl bg-black">
+      <div ref={containerRef} className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background dark:bg-card">
         {ytId ? (
           <iframe
             src={`https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&rel=0`}
@@ -173,7 +173,7 @@ const HLSVideoPlayer = ({
   return (
     <div
       ref={containerRef}
-      className="relative aspect-video rounded-2xl overflow-hidden border-4 border-gold/30 shadow-2xl bg-black group cursor-pointer"
+      className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background dark:bg-card group cursor-pointer"
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
       onClick={togglePlay}
@@ -201,14 +201,14 @@ const HLSVideoPlayer = ({
           LIVE
         </Badge>
         {viewerCount > 0 && (
-          <Badge variant="secondary" className="bg-black/50 text-primary-foreground border-none">
+          <Badge variant="secondary" className="bg-muted/50 text-foreground border-none">
             <Wifi className="h-3 w-3 mr-1" /> {viewerCount.toLocaleString()} watching
           </Badge>
         )}
       </div>
 
       <div
-        className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${showControls || !playing ? "opacity-100" : "opacity-0"}`}
+        className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 ${showControls || !playing ? "opacity-100" : "opacity-0"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -230,7 +230,7 @@ const HLSVideoPlayer = ({
       {!playing && !error && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
-            <div className="absolute inset-0 animate-ping rounded-full bg-gold/30" />
+            <div className="absolute inset-0 animate-ping rounded-full bg-gold/20" />
             <div className="relative w-20 h-20 rounded-full bg-gold text-accent-foreground glow-gold flex items-center justify-center">
               <Play className="h-8 w-8 ml-1" />
             </div>

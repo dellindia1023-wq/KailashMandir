@@ -89,7 +89,12 @@ export default async function handler(req: any, res: any) {
     // Fetch all knowledge articles
     const { data: knowledge, error: knowledgeError } = await supabase
       .from("knowledge_articles")
-      .select("id, updated_at")
+      .select("id, question, updated_at")
+      .order("updated_at", { ascending: false });
+
+    const { data: categories, error: categoriesError } = await supabase
+      .from("blog_categories")
+      .select("slug, updated_at")
       .order("updated_at", { ascending: false });
 
     if (knowledgeError) {
@@ -106,13 +111,12 @@ export default async function handler(req: any, res: any) {
     }));
 
     const knowledgeArticleEntries = (knowledge || []).map((article) => ({
-      loc: `${BASE_URL}/knowledge-hub?article=${encodeURIComponent(article.id)}`,
+      loc: `${BASE_URL}/knowledge/${encodeURIComponent((article.question || article.id).toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-"))}`,
       lastmod: formatDate(article.updated_at),
       changefreq: "weekly" as const,
       priority: "0.75",
     }));
 
-    // Add blog listing page
     const blogListEntry = {
       loc: `${BASE_URL}/blogs`,
       lastmod: formatDate(new Date()),
@@ -120,19 +124,37 @@ export default async function handler(req: any, res: any) {
       priority: "0.90",
     };
 
-    // Add knowledge hub listing page
     const knowledgeHubEntry = {
-      loc: `${BASE_URL}/knowledge-hub`,
+      loc: `${BASE_URL}/knowledge`,
       lastmod: formatDate(new Date()),
       changefreq: "daily" as const,
       priority: "0.85",
     };
 
-    // Combine all URLs
+    const categoryEntries = (categories || []).map((category) => ({
+      loc: `${BASE_URL}/blog/category/${category.slug}`,
+      lastmod: category.updated_at ? formatDate(category.updated_at) : formatDate(new Date()),
+      changefreq: "weekly" as const,
+      priority: "0.75",
+    }));
+
+    const knowledgeCategoryEntries = (knowledge || [])
+      .map((article) => (article.category || "").trim())
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.indexOf(value) === index)
+      .map((category) => ({
+        loc: `${BASE_URL}/knowledge/category/${category.toLowerCase().replace(/\s+/g, "-")}`,
+        lastmod: formatDate(new Date()),
+        changefreq: "weekly" as const,
+        priority: "0.70",
+      }));
+
     const allUrls = [
       ...STATIC_URLS,
       blogListEntry,
       knowledgeHubEntry,
+      ...categoryEntries,
+      ...knowledgeCategoryEntries,
       ...blogEntries,
       ...knowledgeArticleEntries,
     ];

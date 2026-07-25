@@ -30,7 +30,7 @@ const quickActions = [
 
 const moreCards = [
   { title: "Blogs", icon: BookMarked, href: "/blogs", color: "text-primary", bg: "bg-primary/10" },
-  { title: "Knowledge Hub", icon: BookOpen, href: "/knowledge-hub", color: "text-gold", bg: "bg-gold/10" },
+  { title: "Knowledge Hub", icon: BookOpen, href: "/knowledge", color: "text-gold", bg: "bg-gold/10" },
   { title: "Events", icon: CalendarDays, href: "/events", color: "text-maroon", bg: "bg-maroon/10" },
   { title: "Gallery", icon: Camera, href: "/gallery", color: "text-gold", bg: "bg-gold/10" },
   { title: "About Temple", icon: History, href: "/about", color: "text-saffron", bg: "bg-saffron/10" },

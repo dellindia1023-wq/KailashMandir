@@ -2,12 +2,8 @@ import Header from "@/components/Header";
 import SEOHead from "@/components/SEOHead";
 import Footer from "@/components/Footer";
 import LiveDarshan from "@/components/LiveDarshan";
-import PageHeroBanner from "@/components/PageHeroBanner";
-import TempleDivider from "@/components/TempleDivider";
 import useScrollReveal from "@/hooks/useScrollReveal";
-import templeHero from "@/assets/gallery/devotees-prayer.jpg";
 import shivaLingam from "@/assets/gallery/shivling-chandan.jpg";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -47,22 +43,33 @@ const LiveDarshanPage = () => {
       />
       <Header />
       <main>
-        <PageHeroBanner
-          image={templeHero}
-          title="Live"
-          highlight="Darshan"
-          subtitle="Experience the divine presence of Lord Shiva from wherever you are."
-          mantra="ॐ नमः शिवाय"
-          badge={<Badge className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30">🔴 Live Stream</Badge>}
-        />
-
-        <TempleDivider />
-
-        <section ref={revealContent.ref} className={revealContent.className}>
-          <LiveDarshan />
+        {/* Header Section */}
+        <section className="py-12 md:py-20 bg-muted temple-pattern overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
+          <div className="container mx-auto px-4 relative z-10 text-center">
+            <p className="text-gold font-heading text-sm md:text-lg mb-3 tracking-wider uppercase">हर हर महादेव</p>
+            <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground mb-4">
+              <span className="text-gradient-sacred">Live Darshan</span>
+            </h1>
+            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto mb-3">
+              24/7 Divine Stream from Kailash Mahadev Temple
+            </p>
+            <p className="text-sm md:text-base text-muted-foreground max-w-3xl mx-auto">
+              Join thousands of devotees worldwide as they experience the sacred rituals and divine presence of Lord Shiva in real-time. Our live darshan brings the temple sanctum directly to your home.
+            </p>
+          </div>
         </section>
 
-        <TempleDivider />
+        {/* Live Player Section */}
+        <section ref={revealContent.ref} className={`py-10 md:py-16 bg-background ${revealContent.className}`}>
+          <div className="container mx-auto px-4">
+            <div className="max-w-6xl mx-auto">
+              <div className="rounded-2xl overflow-hidden shadow-2xl border border-gold/10 hover:shadow-3xl transition-shadow duration-500">
+                <LiveDarshan />
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* CTA */}
         <section ref={revealCta.ref} className={`relative py-14 md:py-24 overflow-hidden ${revealCta.className}`}>

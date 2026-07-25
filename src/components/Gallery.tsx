@@ -64,19 +64,8 @@ const Gallery = () => {
   const goToNext = () => { if (selectedImage !== null) setSelectedImage(selectedImage === filteredImages.length - 1 ? 0 : selectedImage + 1); };
 
   return (
-    <section id="gallery" className="py-10 md:py-24 bg-muted temple-pattern">
+    <section id="gallery" className="py-10 md:py-16 bg-muted temple-pattern">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-8 md:mb-16">
-          <Badge className="mb-3 md:mb-4 bg-primary/10 text-primary border-primary/20">
-            <Camera className="h-3 w-3 mr-1" />
-            {t("gallery.badge")}
-          </Badge>
-          <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 md:mb-4">
-            {t("gallery.title")} <span className="text-gradient-sacred">{t("gallery.titleHighlight")}</span>
-          </h2>
-          <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">{t("gallery.subtitle")}</p>
-        </div>
-
         <div className="flex flex-wrap justify-center gap-2 mb-6 md:mb-8">
           {categories.map((category) => (
             <Button key={category} variant={filter === category ? "default" : "outline"} size="sm"

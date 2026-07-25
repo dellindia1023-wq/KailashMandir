@@ -71,7 +71,16 @@ export default async function handler(req: any, res: any) {
       throw blogsError;
     }
 
-    // Build RSS items
+    const { data: knowledge, error: knowledgeError } = await supabase
+      .from("knowledge_articles")
+      .select("id, question, answer, slug, updated_at, created_at")
+      .order("updated_at", { ascending: false })
+      .limit(20);
+
+    if (knowledgeError) {
+      console.error("Error fetching knowledge articles for RSS:", knowledgeError);
+    }
+
     const rssItems = (blogs || [])
       .map((blog) => {
         const link = `${BASE_URL}/blog/${blog.slug}`;
@@ -102,7 +111,22 @@ export default async function handler(req: any, res: any) {
       })
       .join("");
 
-    // Generate RSS feed
+    const knowledgeRssItems = (knowledge || [])
+      .map((article) => {
+        const link = `${BASE_URL}/knowledge/${article.slug || article.question?.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-") || article.id}`;
+        return `
+    <item>
+      <title>${escapeXml(article.question || "Knowledge article")}</title>
+      <link>${escapeXml(link)}</link>
+      <guid isPermaLink="true">${escapeXml(link)}</guid>
+      <pubDate>${formatRssDate(article.created_at || article.updated_at || new Date())}</pubDate>
+      <lastBuildDate>${formatRssDate(article.updated_at || article.created_at || new Date())}</lastBuildDate>
+      <description>${escapeXml(article.answer?.replace(/<[^>]*>/g, "").slice(0, 220) || "Temple knowledge article")}</description>
+      <category>Knowledge</category>
+    </item>`;
+      })
+      .join("");
+
     const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
@@ -119,6 +143,7 @@ export default async function handler(req: any, res: any) {
       <link>${escapeXml(BASE_URL)}</link>
     </image>
     ${rssItems}
+    ${knowledgeRssItems}
   </channel>
 </rss>`;
 

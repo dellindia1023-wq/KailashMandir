@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autoGenerateBlogSEO, autoGenerateKnowledgeSEO, buildBlogContentMetadata, buildKnowledgeContentMetadata, buildContentAutomationMetadata, analyzeContentQuality } from "@/lib/contentSeo";
+import { autoGenerateBlogSEO, autoGenerateKnowledgeSEO, buildBlogContentMetadata, buildKnowledgeContentMetadata, buildContentAutomationMetadata, analyzeContentQuality, buildKnowledgeArticleSlug, extractHeadingsFromContent, buildCollectionPageMetadata } from "@/lib/contentSeo";
 
 describe("content SEO helpers", () => {
   it("creates fallback SEO metadata for blogs", () => {
@@ -56,7 +56,59 @@ describe("content SEO helpers", () => {
 
     expect(metadata.faq_sections).toHaveLength(1);
     expect(metadata.answer_first_paragraph).toContain("The temple opens");
-    expect(metadata.canonical_url).toContain("/knowledge-hub");
+    expect(metadata.canonical_url).toContain("/knowledge/darshan-timing");
+    expect(metadata.internal_links.some((link: { href: string }) => link.href === "/knowledge")).toBe(true);
+  });
+
+  it("builds a stable slug from knowledge article text", () => {
+    expect(buildKnowledgeArticleSlug("What is the darshan timing?")).toBe("what-is-the-darshan-timing");
+    expect(buildKnowledgeArticleSlug("  Temple timings  ")).toBe("temple-timings");
+  });
+
+  it("creates SEO metadata for content collection landing pages", () => {
+    const metadata = buildCollectionPageMetadata({
+      kind: "category",
+      type: "blog",
+      slug: "festivals",
+      title: "Temple Festivals",
+      description: "Stories and updates about temple festivals and celebrations.",
+      baseUrl: "https://kailashmahadev.in",
+      itemCount: 4,
+    } as any);
+
+    expect(metadata.title).toContain("Temple Festivals");
+    expect(metadata.canonical_url).toContain("/blog/category/festivals");
+    expect(metadata.schema["@type"]).toBe("CollectionPage");
+  });
+
+  it("extracts structured headings and contextual links from content", () => {
+    const metadata = buildContentAutomationMetadata({
+      title: "Puja booking guide",
+      content: "## Morning Rituals\n\nLearn about puja booking and darshan timings.",
+      excerpt: "A helpful guide for devotees.",
+      slug: "puja-booking-guide",
+      baseUrl: "https://kailashmahadev.in",
+      type: "blog",
+    } as any);
+
+    expect(extractHeadingsFromContent("## Morning Rituals\n\nLearn about puja booking.")).toHaveLength(1);
+    expect(metadata.table_of_contents.some((item: { text: string }) => item.text === "Morning Rituals")).toBe(true);
+    expect(metadata.smart_linking.contextual_links.some((link: { href: string }) => link.href === "/pujas")).toBe(true);
+    expect(metadata.question_engine.people_also_ask.length).toBeGreaterThan(0);
+    expect(metadata.question_engine.question_variations.length).toBeGreaterThan(0);
+  });
+
+  it("uses the knowledge listing route in knowledge search schema", () => {
+    const metadata = buildContentAutomationMetadata({
+      question: "What is the darshan timing?",
+      answer: "The temple opens early in the morning for devotees.",
+      category: "Darshan",
+      slug: "darshan-timing",
+      baseUrl: "https://kailashmahadev.in",
+      type: "knowledge",
+    } as any);
+
+    expect(metadata.schema.search_action.target.urlTemplate).toContain("/knowledge?query={search_term_string}");
   });
 
   it("adds internal links and image sizing metadata for blog content", () => {

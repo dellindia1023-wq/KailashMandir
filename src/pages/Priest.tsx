@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -63,9 +63,9 @@ const Priest = () => {
 
   useEffect(() => {
     if (user && (isPriest || isAdmin)) fetchData();
-  }, [user, isPriest, isAdmin]);
+  }, [user, isPriest, isAdmin, fetchData]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
@@ -86,7 +86,7 @@ const Priest = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     setUpdatingStatus(bookingId);

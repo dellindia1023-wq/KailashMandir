@@ -23,6 +23,19 @@ const truncate = (value: string, length: number) => {
   return value.length > length ? `${value.slice(0, length - 1).trimEnd()}…` : value;
 };
 
+export const extractHeadingsFromContent = (content?: string) => {
+  return Array.from((content || "").matchAll(/^(#{1,6})\s+(.+)$/gm)).map(([, hashes, heading]) => ({
+    level: hashes.length,
+    text: heading.trim(),
+    id: heading
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-"),
+  }));
+};
+
 const buildEntityContext = (value?: string) => {
   const lowerValue = (value || "").toLowerCase();
   const entities: Array<{ name: string; type: string; description: string; related_terms: string[] }> = [];
@@ -91,6 +104,16 @@ const buildEntityContext = (value?: string) => {
   }
 
   return entities;
+};
+
+export const buildKnowledgeArticleSlug = (value?: string) => {
+  return (value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "") || "knowledge-article";
 };
 
 const tokenizeKeywords = (value?: string) => {
@@ -250,7 +273,7 @@ const buildQuestionEngine = (content: {
   };
 };
 
-const buildSmartLinking = (content: {
+const buildInternalLinkSuggestions = (content: {
   title?: string;
   content?: string;
   excerpt?: string;
@@ -258,12 +281,36 @@ const buildSmartLinking = (content: {
   type?: "blog" | "knowledge";
 }) => {
   const plainText = toPlainText(`${content.title || ""} ${content.content || ""} ${content.excerpt || ""}`).toLowerCase();
-  const contextualLinks = [
-    ...(plainText.includes("puja") ? [{ label: "Puja Booking", href: "/pujas" }] : []),
-    ...(plainText.includes("darshan") ? [{ label: "Darshan Timings", href: "/darshan-timings" }] : []),
-    ...(plainText.includes("donat") ? [{ label: "Donation", href: "/donate" }] : []),
-    ...(plainText.includes("festival") || plainText.includes("shivaratri") ? [{ label: "Temple Events", href: "/events" }] : []),
-  ];
+  const links: Array<{ label: string; href: string }> = [];
+
+  if (content.type === "knowledge") {
+    links.push({ label: "Knowledge Hub", href: "/knowledge" });
+    links.push({ label: "Blog Archive", href: "/blogs" });
+  } else {
+    links.push({ label: "Blog Archive", href: "/blogs" });
+    links.push({ label: "Knowledge Hub", href: "/knowledge" });
+  }
+
+  if (/(puja|seva|ritual)/.test(plainText)) links.push({ label: "Puja Booking", href: "/pujas" });
+  if (/(darshan|timing|visit|entry)/.test(plainText)) links.push({ label: "Darshan Timings", href: "/darshan-timings" });
+  if (/(festival|shivaratri|event)/.test(plainText)) links.push({ label: "Temple Events", href: "/events" });
+  if (/(donat|support|charit)/.test(plainText)) links.push({ label: "Donation", href: "/donate" });
+  if (/(gallery|photo|video|image)/.test(plainText)) links.push({ label: "Gallery", href: "/gallery" });
+  if (/(contact|help|support|guide)/.test(plainText)) links.push({ label: "Contact", href: "/contact" });
+
+  links.push({ label: "About the Temple", href: "/about" });
+
+  return [...new Map(links.map((link) => [link.href, link])).values()].slice(0, 6);
+};
+
+const buildSmartLinking = (content: {
+  title?: string;
+  content?: string;
+  excerpt?: string;
+  category?: string;
+  type?: "blog" | "knowledge";
+}) => {
+  const contextualLinks = buildInternalLinkSuggestions(content);
 
   return {
     related_articles: contextualLinks.slice(0, 3),
@@ -355,12 +402,13 @@ export const buildBlogContentMetadata = (content: {
     level: heading.level,
   }));
   const canonicalUrl = `${content.baseUrl || "https://kailashmahadev.in"}/blog/${content.slug || "article"}`;
-  const lowerContent = (content.content || content.excerpt || "").toLowerCase();
-  const internalLinks = [
-    ...(lowerContent.includes("puja") ? [{ label: "Puja Booking", href: "/pujas" }] : []),
-    ...(lowerContent.includes("darshan") ? [{ label: "Darshan Timings", href: "/darshan-timings" }] : []),
-    ...(lowerContent.includes("donat") ? [{ label: "Donation", href: "/donate" }] : []),
-  ];
+  const internalLinks = buildInternalLinkSuggestions({
+    title: content.title,
+    content: content.content,
+    excerpt: content.excerpt,
+    category: content.category,
+    type: "blog",
+  });
   const entityContext = buildEntityContext((content.content || content.excerpt || "") + " " + (content.title || ""));
   const contextBlocks = [
     {
@@ -390,6 +438,7 @@ export const buildBlogContentMetadata = (content: {
       nav: true,
     },
     internal_links: internalLinks,
+    site_links: internalLinks,
     image_dimensions: {
       width: 1200,
       height: 630,
@@ -516,7 +565,7 @@ export const buildContentAutomationMetadata = (content: {
     seo_description: seo.seo_description,
     seo_keywords: seoKeywords,
     canonical_url: content.type === "knowledge"
-      ? `${baseUrl}/knowledge-hub#${slug}`
+      ? `${baseUrl}/knowledge/${slug}`
       : `${baseUrl}/blog/${slug}`,
     open_graph: {
       title: seo.seo_title,
@@ -547,8 +596,8 @@ export const buildContentAutomationMetadata = (content: {
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
-          { "@type": "ListItem", position: 2, name: content.type === "knowledge" ? "Knowledge Hub" : "Blog", item: content.type === "knowledge" ? `${baseUrl}/knowledge-hub` : `${baseUrl}/blog` },
-          { "@type": "ListItem", position: 3, name: titleText, item: content.type === "knowledge" ? `${baseUrl}/knowledge-hub#${slug}` : `${baseUrl}/blog/${slug}` },
+          { "@type": "ListItem", position: 2, name: content.type === "knowledge" ? "Knowledge Hub" : "Blog", item: content.type === "knowledge" ? `${baseUrl}/knowledge` : `${baseUrl}/blog` },
+          { "@type": "ListItem", position: 3, name: titleText, item: content.type === "knowledge" ? `${baseUrl}/knowledge/${slug}` : `${baseUrl}/blog/${slug}` },
         ],
       },
       faq: content.type === "knowledge" ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: [{ "@type": "Question", name: titleText, acceptedAnswer: { "@type": "Answer", text: shortAnswer } }] } : null,
@@ -567,7 +616,7 @@ export const buildContentAutomationMetadata = (content: {
         "@context": "https://schema.org",
         "@type": "WebPage",
         name: titleText,
-        url: content.type === "knowledge" ? `${baseUrl}/knowledge-hub#${slug}` : `${baseUrl}/blog/${slug}`,
+        url: content.type === "knowledge" ? `${baseUrl}/knowledge/${slug}` : `${baseUrl}/blog/${slug}`,
         description: seo.seo_description,
         inLanguage: "en",
       },
@@ -583,7 +632,7 @@ export const buildContentAutomationMetadata = (content: {
         "@type": "SearchAction",
         target: {
           "@type": "EntryPoint",
-          urlTemplate: `${baseUrl}/knowledge-hub?query={search_term_string}`,
+          urlTemplate: `${baseUrl}/knowledge?query={search_term_string}`,
         },
         "query-input": "required name=search_term_string",
       },
@@ -644,6 +693,54 @@ export const buildContentAutomationMetadata = (content: {
   };
 };
 
+export const buildCollectionPageMetadata = (content: {
+  kind: "category" | "tag";
+  type: "blog" | "knowledge";
+  slug?: string;
+  title?: string;
+  description?: string;
+  baseUrl?: string;
+  itemCount?: number;
+  breadcrumbLabel?: string;
+}) => {
+  const resolvedSlug = content.slug || "collection";
+  const baseUrl = content.baseUrl || "https://kailashmahadev.in";
+  const prefix = content.type === "knowledge" ? "/knowledge" : "/blog";
+  const path = `${prefix}/${content.kind === "tag" ? "tag" : "category"}/${resolvedSlug}`;
+  const canonicalUrl = `${baseUrl}${path}`;
+  const title = content.title || `${content.kind === "tag" ? "Tag" : "Category"} ${resolvedSlug} | Kailash Mahadev Temple Agra`;
+  const description = content.description || `Discover ${resolvedSlug} articles and insights from Kailash Mahadev Temple Agra.`;
+
+  return {
+    title,
+    description,
+    canonical_url: canonicalUrl,
+    path,
+    item_count: content.itemCount || 0,
+    schema: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: title,
+      description,
+      url: canonicalUrl,
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: content.itemCount || 0,
+        itemListElement: [],
+      },
+    },
+    breadcrumb: {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+        { "@type": "ListItem", position: 2, name: content.type === "knowledge" ? "Knowledge Hub" : "Blog", item: content.type === "knowledge" ? `${baseUrl}/knowledge` : `${baseUrl}/blogs` },
+        { "@type": "ListItem", position: 3, name: content.breadcrumbLabel || title, item: canonicalUrl },
+      ],
+    },
+  };
+};
+
 export const buildKnowledgeContentMetadata = (content: {
   question?: string;
   answer?: string;
@@ -659,8 +756,15 @@ export const buildKnowledgeContentMetadata = (content: {
       answer: answerFirstParagraph,
     },
   ];
-  const canonicalUrl = `${content.baseUrl || "https://kailashmahadev.in"}/knowledge-hub${content.slug ? `#${content.slug}` : ""}`;
+  const resolvedSlug = content.slug || (content.question || "knowledge-article").toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
+  const canonicalUrl = `${content.baseUrl || "https://kailashmahadev.in"}/knowledge/${resolvedSlug}`;
   const entityContext = buildEntityContext((content.answer || "") + " " + (content.question || ""));
+  const internalLinks = buildInternalLinkSuggestions({
+    title: content.question,
+    content: content.answer,
+    category: content.category,
+    type: "knowledge",
+  });
 
   return {
     faq_sections: faqSections,
@@ -669,6 +773,8 @@ export const buildKnowledgeContentMetadata = (content: {
     question_variants: [content.question || "Common question"],
     speakable_structure: true,
     entity_first_content: true,
+    internal_links: internalLinks,
+    site_links: internalLinks,
     semantic_html_structure: {
       article: true,
       section: true,
@@ -765,7 +871,7 @@ export const analyzeContentQuality = (content: {
     type: content.type,
   });
   const slugPreview = content.type === "knowledge"
-    ? `${content.baseUrl || "https://kailashmahadev.in"}/knowledge-hub#${content.slug || titleText.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-")}`
+    ? `${content.baseUrl || "https://kailashmahadev.in"}/knowledge/${content.slug || titleText.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-")}`
     : `${content.baseUrl || "https://kailashmahadev.in"}/blog/${content.slug || titleText.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-")}`;
   const canonicalPreview = metadata.canonical_url;
   const metaPreview = metadata.seo_description;

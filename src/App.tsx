@@ -75,6 +75,8 @@ const BlogPage = lazy(() => import("./pages/BlogPage"));
 const BlogDetailPage = lazy(() => import("./pages/BlogDetailPage"));
 const AuthorProfilePage = lazy(() => import("./pages/AuthorProfilePage"));
 const KnowledgeHubPage = lazy(() => import("./pages/KnowledgeHubPage"));
+const KnowledgeDetailPage = lazy(() => import("./pages/KnowledgeDetailPage"));
+const CollectionPage = lazy(() => import("./pages/CollectionPage"));
 
 // Lazy-loaded priest pages
 const PriestLayout = lazy(() => import("./components/layouts/PriestLayout"));
@@ -120,7 +122,12 @@ const routeDefinitions: RouteObject[] = [
   { path: "/blogs", element: <BlogPage /> },
   { path: "/blog/:slug", element: <BlogDetailPage /> },
   { path: "/author/:slug", element: <AuthorProfilePage /> },
+  { path: "/knowledge", element: <KnowledgeHubPage /> },
+  { path: "/knowledge/:slug", element: <KnowledgeDetailPage /> },
+  { path: "/knowledge/category/:slug", element: <CollectionPage contentType="knowledge" /> },
   { path: "/knowledge-hub", element: <KnowledgeHubPage /> },
+  { path: "/blog/category/:slug", element: <CollectionPage contentType="blog" /> },
+  { path: "/blog/tag/:slug", element: <CollectionPage contentType="blog" /> },
 
   {
     path: "/dashboard",

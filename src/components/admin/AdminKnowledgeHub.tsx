@@ -49,6 +49,7 @@ export const AdminKnowledgeHub = () => {
     question: "",
     answer: "",
     category: "",
+    slug: "",
     search_keywords: "",
     seo_title: "",
     seo_description: "",
@@ -93,6 +94,7 @@ export const AdminKnowledgeHub = () => {
       question: "",
       answer: "",
       category: "",
+      slug: "",
       search_keywords: "",
       seo_title: "",
       seo_description: "",
@@ -220,6 +222,19 @@ export const AdminKnowledgeHub = () => {
                     placeholder="What is the question?"
                     className="mt-2"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="slug">URL slug</Label>
+                  <Input
+                    id="slug"
+                    name="slug"
+                    value={formData.slug || ""}
+                    onChange={handleInputChange}
+                    placeholder="custom-slug"
+                    className="mt-2"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Leave blank to auto-generate from the question.</p>
                 </div>
 
                 {/* Answer */}

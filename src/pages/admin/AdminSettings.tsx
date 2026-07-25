@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DarshanScheduleManager from "@/components/admin/DarshanScheduleManager";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,10 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, Wifi, WifiOff, Save, Loader2, Youtube, Upload, Radio } from "lucide-react";
+import { Video, Wifi, WifiOff, Save, Loader2, Youtube, Upload, Radio, Camera } from "lucide-react";
 import DonationSettingsPanel from "@/components/admin/DonationSettingsPanel";
 
-type StreamType = "hls" | "youtube" | "upload";
+type StreamType = "hls" | "youtube" | "upload" | "mobile";
 
 const STREAM_TYPE_LABELS: Record<StreamType, { label: string; icon: React.ReactNode; desc: string; placeholder: string }> = {
   hls: {
@@ -35,6 +35,12 @@ const STREAM_TYPE_LABELS: Record<StreamType, { label: string; icon: React.ReactN
     desc: "Paste a direct video file URL (.mp4, .webm). Useful for pre-recorded darshan playback when stream is unavailable.",
     placeholder: "https://storage.example.com/darshan-replay.mp4",
   },
+  mobile: {
+    label: "Mobile Camera",
+    icon: <Camera className="h-4 w-4" />,
+    desc: "Grant camera permission on your phone to preview the live darshan feed locally.",
+    placeholder: "Mobile camera stream preview",
+  },
 };
 
 const AdminSettings = () => {
@@ -47,6 +53,10 @@ const AdminSettings = () => {
   const [title, setTitle] = useState("Live Darshan");
   const [description, setDescription] = useState("");
   const [viewerCount, setViewerCount] = useState(0);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraPermission, setCameraPermission] = useState<PermissionState>("prompt");
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -101,6 +111,20 @@ const AdminSettings = () => {
     };
     fetch();
   }, []);
+
+  useEffect(() => {
+    if (!videoRef.current || !cameraStream) return;
+    videoRef.current.srcObject = cameraStream;
+    videoRef.current.play().catch(() => {});
+  }, [cameraStream]);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [cameraStream]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -193,6 +217,33 @@ const AdminSettings = () => {
     }
   };
 
+  const requestCameraPermission = async () => {
+    setCameraLoading(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setCameraStream(stream);
+      setCameraPermission("granted");
+      toast.success("Camera permission granted. Preview is active.");
+    } catch (error: any) {
+      if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
+        setCameraPermission("denied");
+        toast.error("Camera permission denied. Please allow access to use mobile camera.");
+      } else {
+        toast.error("Unable to access camera: " + (error?.message || error));
+      }
+      setCameraStream(null);
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const stopCameraPreview = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -265,20 +316,50 @@ const AdminSettings = () => {
             </Select>
           </div>
 
-          {/* Stream URL */}
-          <div className="space-y-2">
-            <Label htmlFor="stream-url" className="flex items-center gap-2">
-              {currentTypeInfo.icon}
-              {currentTypeInfo.label} URL
-            </Label>
-            <Input
-              id="stream-url"
-              placeholder={currentTypeInfo.placeholder}
-              value={streamUrl}
-              onChange={(e) => setStreamUrl(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">{currentTypeInfo.desc}</p>
-          </div>
+          {streamType !== "mobile" ? (
+            <div className="space-y-2">
+              <Label htmlFor="stream-url" className="flex items-center gap-2">
+                {currentTypeInfo.icon}
+                {currentTypeInfo.label} URL
+              </Label>
+              <Input
+                id="stream-url"
+                placeholder={currentTypeInfo.placeholder}
+                value={streamUrl}
+                onChange={(e) => setStreamUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{currentTypeInfo.desc}</p>
+            </div>
+          ) : (
+            <div className="space-y-3 rounded-xl border border-gold/20 bg-gold/10 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Camera className="h-4 w-4" />
+                    Mobile camera preview
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Grant camera access on your phone to preview the live feed locally.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={cameraStream ? stopCameraPreview : requestCameraPermission}
+                  disabled={cameraLoading}
+                >
+                  {cameraLoading ? "Please wait..." : cameraStream ? "Stop Preview" : "Allow Camera"}
+                </Button>
+              </div>
+              {cameraPermission === "denied" && (
+                <p className="text-xs text-destructive">Camera permission denied. Please allow access from your browser settings.</p>
+              )}
+              {cameraStream && (
+                <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                  <video ref={videoRef} className="w-full h-64 object-cover bg-black" muted playsInline />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Title */}
           <div className="space-y-2">

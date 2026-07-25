@@ -2,28 +2,18 @@ import Header from "@/components/Header";
 import SEOHead from "@/components/SEOHead";
 import Footer from "@/components/Footer";
 import Gallery from "@/components/Gallery";
-import PageHeroBanner from "@/components/PageHeroBanner";
 import TempleDivider from "@/components/TempleDivider";
 import useScrollReveal from "@/hooks/useScrollReveal";
-import aartiCeremony from "@/assets/gallery/shivling-shringar-1.jpg";
 import shivaLingam from "@/assets/gallery/shivling-chandan.jpg";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Camera, Video, Upload, ArrowRight } from "lucide-react";
+import { ArrowRight, Video } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const GalleryPage = () => {
   const { t } = useLanguage();
   const revealGallery = useScrollReveal();
-  const revealHighlights = useScrollReveal();
   const revealCta = useScrollReveal();
-
-  const highlights = [
-    { icon: Camera, title: t("gallery.templeArchitecture"), count: t("gallery.templeArchitectureCount"), desc: t("gallery.templeArchitectureDesc") },
-    { icon: Video, title: t("gallery.festivalMoments"), count: t("gallery.festivalMomentsCount"), desc: t("gallery.festivalMomentsDesc") },
-    { icon: Upload, title: t("gallery.devoteeMemories"), count: t("gallery.devoteeMemoriesCount"), desc: t("gallery.devoteeMemoriesDesc") },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,38 +42,27 @@ const GalleryPage = () => {
       />
       <Header />
       <main>
-        <PageHeroBanner
-          image={aartiCeremony}
-          title={t("gallery.pageTitle")}
-          highlight={t("gallery.pageTitleHighlight")}
-          subtitle={t("gallery.pageSubtitle")}
-          mantra="ॐ नमः शिवाय"
-        />
-
-        {/* Gallery Highlights Stats */}
-        <section ref={revealHighlights.ref} className={`py-10 md:py-16 bg-muted temple-pattern ${revealHighlights.className}`}>
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto">
-              {highlights.map((h) => (
-                <Card key={h.title} className="text-center border-gold/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                  <CardContent className="p-5 md:p-6">
-                    <div className="w-12 h-12 rounded-full bg-gradient-saffron flex items-center justify-center mx-auto mb-3">
-                      <h.icon className="h-6 w-6 text-primary-foreground" />
-                    </div>
-                    <p className="text-2xl md:text-3xl font-heading font-bold text-primary mb-1">{h.count}</p>
-                    <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-0.5">{h.title}</h3>
-                    <p className="text-xs text-muted-foreground">{h.desc}</p>
-                  </CardContent>
-                </Card>
-              ))}
+        <section className="pt-10 md:pt-14 pb-8 bg-background">
+          <div className="container mx-auto px-4 text-center">
+            <div className="inline-flex items-center justify-center gap-3 mb-4">
+              <span className="inline-flex items-center rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold">
+                फोटो दीर्घा
+              </span>
             </div>
+            <h1 className="font-heading text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-gold via-orange to-saffron bg-clip-text text-transparent mb-4">
+              {t("gallery.pageTitle")}
+            </h1>
+            <div className="mx-auto max-w-3xl rounded-[2rem] border border-gold/20 bg-white/80 dark:bg-slate-900/70 p-6 shadow-[0_24px_60px_rgba(114,46,33,0.14)]">
+              <p className="text-gray-700 dark:text-gray-300 text-base md:text-lg leading-relaxed">
+                {t("gallery.pageSubtitle")}
+              </p>
+            </div>
+            <span className="mt-6 block h-1.5 w-24 mx-auto rounded-full bg-gradient-to-r from-gold to-orange"></span>
           </div>
         </section>
 
-        <TempleDivider />
-
         {/* Main Gallery */}
-        <section ref={revealGallery.ref} className={revealGallery.className}>
+        <section ref={revealGallery.ref} className={`py-10 md:py-16 ${revealGallery.className}`}>
           <Gallery />
         </section>
 

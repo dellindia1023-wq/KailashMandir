@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import NoticeMarquee from "@/components/NoticeMarquee";
+import LiveDarshan from "@/components/LiveDarshan";
 import NextAartiCountdown from "@/components/NextAartiCountdown";
 import MobileHomeCards from "@/components/MobileHomeCards";
 import Footer from "@/components/Footer";
@@ -140,7 +141,7 @@ const sections = [
   { title: "Photo Gallery", description: "Divine moments captured", icon: Camera, href: "/gallery", color: "text-gold", bg: "bg-gold/10", borderColor: "border-gold/20" },
   { title: "Live Darshan", description: "Watch live 24/7", icon: Video, href: "/live-darshan", color: "text-primary", bg: "bg-primary/10", borderColor: "border-primary/20" },
   { title: "Blogs", description: "Insights & temple articles", icon: BookMarked, href: "/blogs", color: "text-primary", bg: "bg-primary/10", borderColor: "border-primary/20" },
-  { title: "Knowledge Hub", description: "FAQ & common questions", icon: BookOpen, href: "/knowledge-hub", color: "text-gold", bg: "bg-gold/10", borderColor: "border-gold/20" },
+  { title: "Knowledge Hub", description: "FAQ & common questions", icon: BookOpen, href: "/knowledge", color: "text-gold", bg: "bg-gold/10", borderColor: "border-gold/20" },
   { title: "Donate", description: "Support the temple", icon: Heart, href: "/donate", color: "text-destructive", bg: "bg-destructive/10", borderColor: "border-destructive/20" },
   { title: "Book a Puja", description: "Sacred rituals & ceremonies", icon: BookOpen, href: "/pujas", color: "text-saffron", bg: "bg-saffron/10", borderColor: "border-saffron/20" },
   { title: "Notice Board", description: "Latest announcements", icon: Megaphone, href: "/notice-board", color: "text-maroon", bg: "bg-maroon/10", borderColor: "border-maroon/20" },
@@ -345,6 +346,18 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
+        <div className="bg-gradient-to-b from-background/50 dark:from-slate-900/50 to-background dark:to-slate-900 py-6 md:py-10 border-b border-gold/10 dark:border-gold/20">
+          <div className="container mx-auto px-4 text-center">
+            <div className="inline-flex items-center gap-3 text-gold/50 dark:text-gold/60">
+              <div className="h-1 w-12 bg-gradient-to-r from-transparent to-gold/40 dark:to-gold/50"></div>
+              <Flame className="h-3 w-3 animate-diya-glow" />
+              <div className="h-1 w-12 bg-gradient-to-l from-transparent to-gold/40 dark:to-gold/50"></div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-0">
+          <LiveDarshan />
+        </div>
         <NoticeMarquee />
         <NextAartiCountdown />
         {/* ═══ Sacred Mantra Ticker ═══ */}
@@ -361,7 +374,7 @@ const Index = () => {
         </div>
 
         {/* ═══ Animated Stats Bar ═══ */}
-        <section ref={revealStats.ref} className={`relative py-8 md:py-12 bg-gradient-saffron overflow-hidden ${revealStats.className}`}>
+        <section ref={revealStats.ref} className={`relative py-6 md:py-8 bg-gradient-saffron overflow-hidden ${revealStats.className}`}>
           <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22%23fff%22%20fill-opacity%3D%220.08%22%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2220%22%20r%3D%222%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E')]" />
           <div className="container mx-auto px-4 relative z-10">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
@@ -388,7 +401,7 @@ const Index = () => {
         <MobileHomeCards />
 
         {/* ═══ Quick Navigation Cards — Desktop Only ═══ */}
-        <section ref={revealExplore.ref} className={`hidden md:block py-10 md:py-20 bg-muted temple-pattern ${revealExplore.className}`}>
+        <section ref={revealExplore.ref} className={`hidden md:block border-y border-border/60 bg-muted/70 py-10 shadow-[0_20px_50px_rgba(15,23,42,0.04)] backdrop-blur-sm md:py-20 ${revealExplore.className}`}>
           <div className="container mx-auto px-4">
             <div className="text-center mb-8 md:mb-12">
               <h2 className="font-heading text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2 md:mb-4">

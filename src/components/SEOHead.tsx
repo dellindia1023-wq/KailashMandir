@@ -31,6 +31,10 @@ interface SEOHeadProps {
   author?: string;
   applicationName?: string;
   noindex?: boolean;
+  articlePublishedTime?: string;
+  articleModifiedTime?: string;
+  section?: string;
+  tags?: string[];
   jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 
@@ -66,6 +70,10 @@ const SEOHead = ({
   author = DEFAULT_AUTHOR,
   applicationName = SITE_NAME,
   noindex = false,
+  articlePublishedTime,
+  articleModifiedTime,
+  section,
+  tags = [],
   jsonLd,
 }: SEOHeadProps) => {
   const location = useLocation();
@@ -130,6 +138,25 @@ const SEOHead = ({
     setMeta("property", "og:locale:alternate", "hi_IN");
     setMeta("property", "og:url", canonicalUrl);
     setMeta("property", "article:publisher", SOCIAL_LINKS.facebook);
+    if (articlePublishedTime) {
+      setMeta("property", "article:published_time", articlePublishedTime);
+      setMeta("property", "og:article:published_time", articlePublishedTime);
+    }
+    if (articleModifiedTime) {
+      setMeta("property", "article:modified_time", articleModifiedTime);
+      setMeta("property", "og:article:modified_time", articleModifiedTime);
+    }
+    if (section) {
+      setMeta("property", "article:section", section);
+      setMeta("property", "og:article:section", section);
+    }
+    tags.forEach((tag, index) => {
+      setMeta("property", `article:tag`, tag);
+      setMeta("property", `og:article:tag`, tag);
+      if (index === 0) {
+        setMeta("name", "keywords", `${keywords}, ${tag}`);
+      }
+    });
 
     setMeta("name", "twitter:card", "summary_large_image");
     setMeta("name", "twitter:title", title);
@@ -293,21 +320,26 @@ const SEOHead = ({
     }
     scriptEl.textContent = JSON.stringify(graphPayload);
   }, [
-    isActiveRoute,
-    title,
+    articleModifiedTime,
+    articlePublishedTime,
+    applicationName,
+    author,
+    breadcrumbLabel,
     description,
-    pagePath,
-    ogType,
+    isActiveRoute,
+    jsonLd,
+    jsonLdString,
+    keywords,
+    noindex,
     ogImage,
     ogLocale,
-    twitterSite,
+    ogType,
+    pagePath,
+    section,
+    tags,
+    title,
     twitterCreator,
-    keywords,
-    author,
-    applicationName,
-    noindex,
-    breadcrumbLabel,
-    jsonLdString,
+    twitterSite,
   ]);
 
   return null;

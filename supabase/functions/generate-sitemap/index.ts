@@ -80,7 +80,7 @@ export default async (req: Request): Promise<Response> => {
 
     // Add knowledge hub listing page
     const knowledgeHubEntry = {
-      loc: `${BASE_URL}/knowledge-hub`,
+      loc: `${BASE_URL}/knowledge`,
       lastmod: new Date().toISOString().split("T")[0],
       changefreq: "daily",
       priority: "0.85",

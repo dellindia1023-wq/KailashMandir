@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +38,7 @@ const UserBookings = () => {
   const [cancelBooking, setCancelBooking] = useState<PujaBooking | null>(null);
   const { sendReminderEmail } = useBookingEmail();
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const { data } = await supabase
@@ -48,9 +48,9 @@ const UserBookings = () => {
       .order("booking_date", { ascending: false });
     setBookings((data as unknown as PujaBooking[]) || []);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchBookings(); }, [user]);
+  useEffect(() => { fetchBookings(); }, [fetchBookings, user]);
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
   const formatTime = (t: string) => { const [h, m] = t.split(':'); const hr = parseInt(h); return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; };

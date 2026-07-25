@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { buildContentAutomationMetadata } from "@/lib/contentSeo";
+import { buildContentAutomationMetadata, buildKnowledgeArticleSlug } from "@/lib/contentSeo";
 
 // Types
 export interface BlogCategory {
@@ -51,6 +51,7 @@ export interface KnowledgeArticle {
   question: string;
   answer: string;
   category: string;
+  slug?: string;
   search_keywords?: string;
   seo_title?: string;
   seo_description?: string;
@@ -435,17 +436,19 @@ export const useCreateKnowledgeArticle = () => {
 
   return useMutation({
     mutationFn: async (article: Partial<KnowledgeArticle>) => {
+      const resolvedSlug = article.slug?.trim() || buildKnowledgeArticleSlug(article.question);
       const automationMetadata = buildContentAutomationMetadata({
         question: article.question,
         answer: article.answer,
         content: article.answer,
         category: article.category,
-        slug: (article as any).slug,
+        slug: resolvedSlug,
         baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
         type: "knowledge",
       });
       const enrichedArticle = {
         ...autoGenerateKnowledgeSEO(article),
+        slug: resolvedSlug,
         seo_title: article.seo_title?.trim() || automationMetadata.seo_title,
         seo_description: article.seo_description?.trim() || automationMetadata.seo_description,
         seo_keywords_field: article.seo_keywords_field?.trim() || automationMetadata.seo_keywords,
@@ -477,17 +480,19 @@ export const useUpdateKnowledgeArticle = () => {
       id,
       ...article
     }: { id: string } & Partial<KnowledgeArticle>) => {
+      const resolvedSlug = article.slug?.trim() || buildKnowledgeArticleSlug(article.question);
       const automationMetadata = buildContentAutomationMetadata({
         question: article.question,
         answer: article.answer,
         content: article.answer,
         category: article.category,
-        slug: (article as any).slug,
+        slug: resolvedSlug,
         baseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
         type: "knowledge",
       });
       const enrichedArticle = {
         ...autoGenerateKnowledgeSEO(article),
+        slug: resolvedSlug,
         seo_title: article.seo_title?.trim() || automationMetadata.seo_title,
         seo_description: article.seo_description?.trim() || automationMetadata.seo_description,
         seo_keywords_field: article.seo_keywords_field?.trim() || automationMetadata.seo_keywords,

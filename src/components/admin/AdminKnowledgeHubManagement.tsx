@@ -32,6 +32,7 @@ export const AdminKnowledgeHubManagement = () => {
     question: "",
     answer: "",
     category: "",
+    slug: "",
     seo_title: "",
     seo_description: "",
     seo_keywords_field: "",
@@ -158,6 +159,7 @@ export const AdminKnowledgeHubManagement = () => {
       question: "",
       answer: "",
       category: "",
+      slug: "",
       seo_title: "",
       seo_description: "",
       seo_keywords_field: "",
@@ -177,6 +179,7 @@ export const AdminKnowledgeHubManagement = () => {
       question: article.question,
       answer: article.answer,
       category: article.category,
+      slug: (article as any).slug || "",
       seo_title: article.seo_title || "",
       seo_description: article.seo_description || "",
       seo_keywords_field: article.seo_keywords_field || "",
@@ -226,6 +229,12 @@ export const AdminKnowledgeHubManagement = () => {
                   <div>
                     <Label htmlFor="question">Question *</Label>
                     <Input id="question" value={formData.question} onChange={(e) => setFormData((prev) => ({ ...prev, question: e.target.value }))} placeholder="Question" className="mt-1" />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="slug">URL slug</Label>
+                    <Input id="slug" value={formData.slug} onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))} placeholder="custom-slug" className="mt-1" />
+                    <p className="mt-1 text-xs text-muted-foreground">Leave blank to auto-generate from the question.</p>
                   </div>
 
                   <div>

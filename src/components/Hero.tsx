@@ -265,13 +265,13 @@ const Hero = () => {
               </Button>
             </Link>
             <Link to={heroButtonLink} className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto border-2 border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/10 px-6 md:px-8 py-5 md:py-6 text-base md:text-lg backdrop-blur-sm"
-              >
-                {heroButtonText}
-              </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto border-2 border-primary-foreground/50 text-foreground dark:text-primary-foreground hover:bg-primary-foreground/10 px-6 md:px-8 py-5 md:py-6 text-base md:text-lg backdrop-blur-sm"
+                >
+                  {heroButtonText}
+                </Button>
             </Link>
           </div>
 

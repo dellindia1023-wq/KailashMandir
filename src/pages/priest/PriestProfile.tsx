@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
@@ -17,14 +17,14 @@ const PriestProfile = () => {
 
   useEffect(() => {
     if (user) fetchProfile();
-  }, [user]);
+  }, [user, fetchProfile]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from("profiles").select("id, full_name, phone, avatar_url").eq("user_id", user.id).maybeSingle();
     setProfile(data);
     setLoading(false);
-  };
+  }, [user]);
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 

@@ -30,7 +30,6 @@ const LiveDarshan = () => {
 
   useEffect(() => {
     let isMounted = true;
-    let intervalId: number;
 
     const fetchSettings = async () => {
       const { data, error } = await supabase
@@ -69,7 +68,7 @@ const LiveDarshan = () => {
 
     fetchSettings();
     syncScheduleStatus();
-    intervalId = window.setInterval(syncScheduleStatus, 60_000);
+    const intervalId = window.setInterval(syncScheduleStatus, 60_000);
 
     const channel = supabase.channel("live-stream-status")
       .on("postgres_changes", { event: "*", schema: "public", table: "live_stream_settings" }, (payload) => {
@@ -105,15 +104,17 @@ const LiveDarshan = () => {
   };
 
   return (
-    <section className="py-10 md:py-24 bg-gradient-to-br from-maroon to-maroon-dark relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-32 md:w-64 h-32 md:h-64 bg-gold/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-48 md:w-96 h-48 md:h-96 bg-saffron/10 rounded-full blur-3xl" />
+    <section className="py-10 md:py-24 bg-maroon/70 dark:bg-maroon/95 text-foreground relative overflow-hidden border-t-4 border-gold/30">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(218,165,32,0.08),rgba(218,165,32,0))]" />
+      <div className="absolute top-0 left-0 w-32 md:w-96 h-32 md:h-96 bg-gold/15 dark:bg-gold/20 rounded-full blur-3xl opacity-40" />
+      <div className="absolute bottom-0 right-0 w-48 md:w-[500px] h-48 md:h-[500px] bg-saffron/15 dark:bg-saffron/20 rounded-full blur-3xl opacity-40" />
+      <div className="absolute top-1/2 left-1/3 w-64 md:w-96 h-64 md:h-96 bg-orange/10 dark:bg-orange/15 rounded-full blur-3xl opacity-30" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid gap-10 lg:grid-cols-[1.7fr_1fr] items-start">
           <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <Badge className="bg-gold/20 text-gold border-gold/30">
+              <Badge className="bg-gold/15 dark:bg-gold/10 text-gold border-gold/30 dark:border-gold/20 shadow-md">
                 {settings.is_live ? (
                   <>
                     <span className="w-2 h-2 rounded-full bg-destructive mr-2 inline-block animate-ping" />
@@ -127,27 +128,27 @@ const LiveDarshan = () => {
                 )}
               </Badge>
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-white/80 border border-white/10">
-                  <p className="text-xs uppercase tracking-[0.25em] text-white/60">{t("liveDarshan.streamType")}</p>
-                  <p className="mt-1 font-semibold text-white">{settings.stream_type.toUpperCase()}</p>
+                <div className="rounded-2xl bg-gold/10 dark:bg-slate-800/50 px-6 py-3 text-sm border border-gold/30 dark:border-gold/40 shadow-md">
+                  <p className="text-xs uppercase tracking-[0.25em] text-gold/80 font-bold">{t("liveDarshan.streamType")}</p>
+                  <p className="mt-1 font-bold text-gold text-base">{settings.stream_type.toUpperCase()}</p>
                 </div>
-                <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-white/80 border border-white/10">
-                  <p className="text-xs uppercase tracking-[0.25em] text-white/60">{t("liveDarshan.viewerCount")}</p>
-                  <p className="mt-1 font-semibold text-white">{settings.viewer_count.toLocaleString()}</p>
+                <div className="rounded-2xl bg-saffron/10 dark:bg-slate-800/50 px-6 py-3 text-sm border border-saffron/30 dark:border-saffron/40 shadow-md">
+                  <p className="text-xs uppercase tracking-[0.25em] text-saffron/80 font-bold">{t("liveDarshan.viewerCount")}</p>
+                  <p className="mt-1 font-bold text-saffron text-base">{settings.viewer_count.toLocaleString()}</p>
                 </div>
               </div>
             </div>
 
             <div>
-              <h2 className="font-heading text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-                {t("liveDarshan.title")} <span className="text-gold">{t("liveDarshan.titleHighlight")}</span>
+              <h2 className="font-heading text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 drop-shadow-lg">
+                {t("liveDarshan.title")} <span className="bg-gradient-to-r from-gold via-orange to-saffron bg-clip-text text-transparent">{t("liveDarshan.titleHighlight")}</span>
               </h2>
-              <p className="text-primary-foreground/80 text-base md:text-lg max-w-3xl">
+              <p className="text-gray-800 dark:text-white/90 text-base md:text-lg max-w-3xl font-medium leading-relaxed">
                 {settings.description ?? t("liveDarshan.subtitle")}
               </p>
             </div>
 
-            <div className="rounded-[2rem] border border-white/10 bg-black/50 p-4 md:p-6 shadow-2xl">
+            <div className="rounded-3xl border-4 border-gold/40 dark:border-gold/50 bg-black/30 dark:bg-black/50 backdrop-blur-sm p-4 md:p-8 shadow-lg hover:shadow-2xl hover:shadow-gold/30 dark:hover:shadow-gold/40 transition-all duration-300">
               <HLSVideoPlayer
                 streamUrl={settings.stream_url}
                 isLive={settings.is_live}
@@ -157,44 +158,50 @@ const LiveDarshan = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="bg-primary-foreground/10 border-primary-foreground/20">
-                <CardContent className="p-4 text-center">
-                  <Video className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-2 text-gold" />
-                  <p className="font-heading font-bold text-lg text-primary-foreground">{t("liveDarshan.watchLive")}</p>
-                  <p className="text-[11px] text-primary-foreground/70 mt-1">{t("liveDarshan.highQuality")}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <Card className="bg-gold/5 dark:bg-slate-800/60 border-2 border-gold/30 dark:border-gold/50 hover:border-gold/50 dark:hover:border-gold/70 transition-all hover:shadow-lg group">
+                <CardContent className="p-6 text-center">
+                  <div className="mb-4 inline-flex p-3 rounded-2xl bg-gold/10 dark:bg-gold/30 group-hover:bg-gold/20 dark:group-hover:bg-gold/40 transition-all">
+                    <Video className="h-6 w-6 text-gold" />
+                  </div>
+                  <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.watchLive")}</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.highQuality")}</p>
                 </CardContent>
               </Card>
-              <Card className="bg-primary-foreground/10 border-primary-foreground/20">
-                <CardContent className="p-4 text-center">
-                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-2 text-gold" />
-                  <p className="font-heading font-bold text-lg text-primary-foreground">{t("liveDarshan.blessings")}</p>
-                  <p className="text-[11px] text-primary-foreground/70 mt-1">{t("liveDarshan.blessingsFromAnywhere")}</p>
+              <Card className="bg-saffron/5 dark:bg-slate-800/60 border-2 border-saffron/30 dark:border-saffron/50 hover:border-saffron/50 dark:hover:border-saffron/70 transition-all hover:shadow-lg group">
+                <CardContent className="p-6 text-center">
+                  <div className="mb-4 inline-flex p-3 rounded-2xl bg-saffron/10 dark:bg-saffron/30 group-hover:bg-saffron/20 dark:group-hover:bg-saffron/40 transition-all">
+                    <Sparkles className="h-6 w-6 text-saffron" />
+                  </div>
+                  <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.blessings")}</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.blessingsFromAnywhere")}</p>
                 </CardContent>
               </Card>
-              <Card className="bg-primary-foreground/10 border-primary-foreground/20">
-                <CardContent className="p-4 text-center">
-                  <Users className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-2 text-gold" />
-                  <p className="font-heading font-bold text-lg text-primary-foreground">24/7</p>
-                  <p className="text-[11px] text-primary-foreground/70 mt-1">{t("liveDarshan.neverMiss")}</p>
+              <Card className="bg-orange/5 dark:bg-slate-800/60 border-2 border-orange/30 dark:border-orange/50 hover:border-orange/50 dark:hover:border-orange/70 transition-all hover:shadow-lg group">
+                <CardContent className="p-6 text-center">
+                  <div className="mb-4 inline-flex p-3 rounded-2xl bg-orange/10 dark:bg-orange/30 group-hover:bg-orange/20 dark:group-hover:bg-orange/40 transition-all">
+                    <Users className="h-6 w-6 text-orange" />
+                  </div>
+                  <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">24/7</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.neverMiss")}</p>
                 </CardContent>
               </Card>
             </div>
           </div>
 
           <aside className="space-y-6">
-            <Card className="bg-white/5 border border-white/10 shadow-2xl">
-              <CardContent className="p-6">
-                <p className="text-xs uppercase tracking-[0.3em] text-white/60">{t("liveDarshan.featureBadge")}</p>
-                <h3 className="mt-3 text-2xl font-heading font-bold text-white">{t("liveDarshan.featureTitle")}</h3>
-                <p className="mt-4 text-sm leading-6 text-white/75">{t("liveDarshan.featureSubtitle")}</p>
+            <Card className="bg-gold/5 dark:bg-slate-800/60 border-2 border-gold/30 dark:border-gold/50 shadow-lg hover:shadow-xl transition-all">
+              <CardContent className="p-7">
+                <p className="text-xs uppercase tracking-[0.4em] text-gold font-bold">{t("liveDarshan.featureBadge")}</p>
+                <h3 className="mt-4 text-2xl font-heading font-bold text-gray-900 dark:text-white drop-shadow">{t("liveDarshan.featureTitle")}</h3>
+                <p className="mt-4 text-sm leading-6 text-gray-800 dark:text-gray-200 font-medium">{t("liveDarshan.featureSubtitle")}</p>
                 <div className="mt-6 grid gap-3">
                   {[
                     t("liveDarshan.featurePoint1"),
                     t("liveDarshan.featurePoint2"),
                     t("liveDarshan.featurePoint3"),
                   ].map((point) => (
-                    <div key={point} className="rounded-3xl bg-black/30 p-4 border border-white/10 text-sm text-white/80">
+                    <div key={point} className="rounded-xl bg-white dark:bg-slate-700/60 p-4 border border-gold/20 dark:border-gold/40 text-sm text-gray-800 dark:text-gray-100 font-medium hover:bg-gold/5 dark:hover:bg-slate-600 transition-all hover:shadow-md">
                       {point}
                     </div>
                   ))}
@@ -202,16 +209,18 @@ const LiveDarshan = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/5 border border-white/10 shadow-2xl">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-3 text-white/80">
-                  <Share2 className="h-5 w-5 text-gold" />
-                  <p className="text-sm font-semibold text-white">{t("liveDarshan.shareLive")}</p>
+            <Card className="bg-saffron/5 dark:bg-slate-800/60 border-2 border-saffron/30 dark:border-saffron/50 shadow-lg hover:shadow-xl transition-all">
+              <CardContent className="p-7 space-y-5">
+                <div className="flex items-center gap-3 text-gray-900 dark:text-white">
+                  <div className="p-2 rounded-lg bg-saffron/10 dark:bg-saffron/30">
+                    <Share2 className="h-5 w-5 text-saffron" />
+                  </div>
+                  <p className="text-sm font-bold tracking-wide">{t("liveDarshan.shareLive")}</p>
                 </div>
-                <Button size="lg" className="w-full bg-gold text-accent-foreground hover:bg-gold-light" onClick={handleCopyLink}>
+                <Button size="lg" className="w-full bg-gradient-to-r from-gold to-orange hover:from-gold/80 hover:to-orange/80 text-white font-bold text-base transition-all shadow-lg hover:shadow-xl" onClick={handleCopyLink}>
                   {copied ? t("liveDarshan.copied") : t("liveDarshan.copyLink")}
                 </Button>
-                <Button asChild size="lg" variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
+                <Button asChild size="lg" className="w-full border-2 border-saffron/40 dark:border-saffron/60 text-gray-900 dark:text-white bg-white dark:bg-slate-700 hover:bg-saffron/5 dark:hover:bg-slate-600 font-bold text-base transition-all">
                   <a href="https://wa.me/?text=Watch%20live%20darshan%20from%20Kailash%20Mahadev%20Temple%20Agra%20https://kailashmahadev.in/live-darshan" target="_blank" rel="noreferrer">
                     {t("liveDarshan.shareWithFamily")}
                   </a>

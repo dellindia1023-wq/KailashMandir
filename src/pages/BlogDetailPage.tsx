@@ -83,6 +83,7 @@ export default function BlogDetailPage() {
   const seoTitle = blog.seo_title || `${blog.title} | Kailash Mahadev Temple Agra`;
   const seoDescription = blog.seo_description || `${blog.excerpt || blog.title} - Learn about Kailash Mahadev Temple Agra's history, significance, and spiritual wisdom.`;
   const seoKeywords = blog.seo_keywords ? `${blog.seo_keywords}, Kailash Mahadev Agra, Agra Temple` : `${blog.title}, Kailash Mahadev Temple, Agra, temple`;
+  const relatedCategorySlug = blog.category?.slug || blog.category?.name?.toLowerCase().replace(/\s+/g, "-");
   const ogImage = blog.featured_image_url || "https://images.unsplash.com/photo-1583391733956-6c78276477e2?auto=format&fit=crop&w=1200&q=80";
   const imageAlt = (blog as any).image_alt || `${blog.title} - Kailash Mahadev Temple Agra`;
   const articleMetadata = buildBlogContentMetadata({
@@ -107,6 +108,7 @@ export default function BlogDetailPage() {
   const intelligence = automationMetadata.intelligence;
   const questionEngine = automationMetadata.question_engine;
   const smartLinking = automationMetadata.smart_linking;
+  const relatedTopicLinks = smartLinking?.contextual_links || [];
 
   // Article Schema
   const articleSchema = {
@@ -216,7 +218,7 @@ export default function BlogDetailPage() {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: `${BASE_URL}/knowledge-hub?query={search_term_string}`,
+      urlTemplate: `${BASE_URL}/knowledge?query={search_term_string}`,
     },
     "query-input": "required name=search_term_string",
   };
@@ -230,6 +232,10 @@ export default function BlogDetailPage() {
         canonical={`/blog/${blog.slug}`}
         ogImage={ogImage}
         ogType="article"
+        articlePublishedTime={blog.published_at || blog.created_at}
+        articleModifiedTime={blog.updated_at}
+        section={blog.category?.name || "Temple Wisdom"}
+        tags={blog.tags?.map((tag) => tag.name) || []}
         jsonLd={[articleSchema, breadcrumbSchema, personSchema, localBusinessSchema, imageObjectSchema, searchActionSchema]}
       />
       <div className="min-h-screen bg-background text-foreground">
@@ -401,6 +407,17 @@ export default function BlogDetailPage() {
                 </div>
 
                 <section className="mt-10 rounded-2xl border border-border/70 bg-card/80 p-6 shadow-sm">
+                  <h2 className="text-xl font-semibold">Related topics</h2>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {relatedTopicLinks.map((link) => (
+                      <Link key={link.href} to={link.href} className="rounded-full border border-primary/20 px-3 py-2 text-sm text-primary transition hover:bg-primary/10">
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="mt-10 rounded-2xl border border-border/70 bg-card/80 p-6 shadow-sm">
                   <h2 className="text-2xl font-semibold">Explore more</h2>
                   <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <Link to="/darshan-timings" className="rounded-xl border border-border/70 bg-background/80 p-4 transition hover:border-primary hover:text-primary">
@@ -414,6 +431,10 @@ export default function BlogDetailPage() {
                     <Link to="/pujas" className="rounded-xl border border-border/70 bg-background/80 p-4 transition hover:border-primary hover:text-primary">
                       <div className="flex items-center gap-2"><HeartHandshake className="h-4 w-4" /> <span className="font-medium">Puja Booking</span></div>
                       <p className="mt-2 text-sm text-muted-foreground">Reserve rituals and special services for your visit.</p>
+                    </Link>
+                    <Link to="/knowledge" className="rounded-xl border border-border/70 bg-background/80 p-4 transition hover:border-primary hover:text-primary">
+                      <div className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> <span className="font-medium">Knowledge Hub</span></div>
+                      <p className="mt-2 text-sm text-muted-foreground">Find clear answers for common temple questions and visitor guidance.</p>
                     </Link>
                     <Link to="/gallery" className="rounded-xl border border-border/70 bg-background/80 p-4 transition hover:border-primary hover:text-primary">
                       <div className="flex items-center gap-2"><Images className="h-4 w-4" /> <span className="font-medium">Gallery</span></div>
@@ -461,12 +482,15 @@ export default function BlogDetailPage() {
                 <section className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-sm">
                   <h2 className="text-xl font-semibold">Related Knowledge Hub</h2>
                   <div className="mt-5 space-y-3">
-                    {relatedKnowledge.length > 0 ? relatedKnowledge.map((article) => (
-                      <a key={article.id} href={`/knowledge-hub#${article.id}`} className="block rounded-xl border border-border/60 bg-background/70 p-3 transition hover:border-primary hover:text-primary">
-                        <p className="font-medium">{article.question}</p>
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.answer}</p>
-                      </a>
-                    )) : <p className="text-sm text-muted-foreground">Explore the Knowledge Hub for more answers.</p>}
+                    {relatedKnowledge.length > 0 ? relatedKnowledge.map((article) => {
+                      const slug = article.slug?.trim() || article.question?.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-") || article.id;
+                      return (
+                        <Link key={article.id} to={`/knowledge/${slug}`} className="block rounded-xl border border-border/60 bg-background/70 p-3 transition hover:border-primary hover:text-primary">
+                          <p className="font-medium">{article.question}</p>
+                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.answer}</p>
+                        </Link>
+                      );
+                    }) : <p className="text-sm text-muted-foreground">Explore the Knowledge Hub for more answers.</p>}
                   </div>
                 </section>
                 <section className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-sm">

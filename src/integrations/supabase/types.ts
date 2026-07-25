@@ -605,6 +605,7 @@ export type Database = {
           seo_description: string | null
           seo_keywords_field: string | null
           seo_title: string | null
+          slug: string | null
           updated_at: string | null
           view_count: number | null
         }
@@ -621,6 +622,7 @@ export type Database = {
           seo_description?: string | null
           seo_keywords_field?: string | null
           seo_title?: string | null
+          slug?: string | null
           updated_at?: string | null
           view_count?: number | null
         }
@@ -637,6 +639,7 @@ export type Database = {
           seo_description?: string | null
           seo_keywords_field?: string | null
           seo_title?: string | null
+          slug?: string | null
           updated_at?: string | null
           view_count?: number | null
         }

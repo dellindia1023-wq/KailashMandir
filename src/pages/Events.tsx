@@ -3,7 +3,6 @@ import SEOHead from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import PageHeroBanner from "@/components/PageHeroBanner";
 import TempleDivider from "@/components/TempleDivider";
 import useScrollReveal from "@/hooks/useScrollReveal";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, ArrowRight, Loader2, Bell, BookOpen } from "lucide-react";
 import { format, isPast } from "date-fns";
 import festivalImg from "@/assets/gallery/shivling-flowers-3.jpg";
-import templeHero from "@/assets/gallery/devotees-prayer.jpg";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -25,7 +23,6 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
   const revealCta = useScrollReveal();
-  const revealInfo = useScrollReveal();
 
   useEffect(() => {
     const fetch = async () => {
@@ -40,30 +37,31 @@ const Events = () => {
   const past = events.filter((e) => isPast(new Date(e.end_date || e.start_date)));
 
   const EventCard = ({ event, isPastEvent = false }: { event: Event; isPastEvent?: boolean }) => (
-    <Card className={`group overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${isPastEvent ? "opacity-70" : "border-primary/10"}`}>
-      <div className="relative h-40 md:h-48 overflow-hidden">
-        <img src={event.image_url || festivalImg} alt={event.event_name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-        {isPastEvent && <Badge className="absolute top-3 left-3 bg-muted text-muted-foreground text-xs">{t("common.pastEvent")}</Badge>}
+    <Card className={`group overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border-2 border-gold/20 dark:border-gold/40 backdrop-blur-sm ${isPastEvent ? "opacity-70" : ""}`}>
+      <div className="relative h-40 md:h-48 overflow-hidden bg-gray-900/20">
+        <img src={event.image_url || festivalImg} alt={event.event_name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+        {isPastEvent && <Badge className="absolute top-3 left-3 bg-gray-500/80 text-white text-xs backdrop-blur-sm">{t("common.pastEvent")}</Badge>}
+        {!isPastEvent && <Badge className="absolute top-3 right-3 bg-red-500/80 text-white text-xs backdrop-blur-sm animate-pulse">Live</Badge>}
       </div>
-      <CardContent className="p-4 md:p-6">
-        <h3 className="font-heading text-base md:text-xl font-bold text-foreground mb-2">{event.event_name}</h3>
-        {event.description && <p className="text-muted-foreground text-xs md:text-sm mb-3 line-clamp-2">{event.description}</p>}
-        <div className="space-y-1.5 mb-3">
-          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-            <Calendar className="h-3.5 w-3.5 text-primary" />
-            <span>{format(new Date(event.start_date), "dd MMM yyyy")}{event.end_date && ` – ${format(new Date(event.end_date), "dd MMM yyyy")}`}</span>
+      <CardContent className="p-5 md:p-6">
+        <h3 className="font-heading text-base md:text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-gold transition-colors">{event.event_name}</h3>
+        {event.description && <p className="text-gray-700 dark:text-gray-300 text-xs md:text-sm mb-4 line-clamp-2 leading-relaxed">{event.description}</p>}
+        <div className="space-y-2 mb-4 pb-4 border-b border-gold/10 dark:border-gold/20">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-gray-700 dark:text-gray-300">
+            <Calendar className="h-4 w-4 text-gold" />
+            <span className="font-medium">{format(new Date(event.start_date), "dd MMM yyyy")}{event.end_date && ` – ${format(new Date(event.end_date), "dd MMM yyyy")}`}</span>
           </div>
           {event.location && (
-            <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 text-primary" /><span>{event.location}</span>
+            <div className="flex items-center gap-2 text-xs md:text-sm text-gray-700 dark:text-gray-300">
+              <MapPin className="h-4 w-4 text-saffron" /><span className="font-medium">{event.location}</span>
             </div>
           )}
         </div>
         {!isPastEvent && (
           <a href={`https://wa.me/918859692841?text=${encodeURIComponent(`🙏 नमस्कार! I would like to enquire about "${event.event_name}" (${format(new Date(event.start_date), "dd MMM yyyy")}) at Kailash Mahadev Mandir, Agra. Please share more details.`)}`} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground text-xs md:text-sm">
-              {t("common.enquireOnWhatsApp")} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            <Button size="sm" className="w-full bg-gradient-to-r from-gold to-orange hover:shadow-lg hover:shadow-gold/40 text-white font-bold transition-all text-xs md:text-sm group/btn">
+              {t("common.enquireOnWhatsApp")} <ArrowRight className="ml-1.5 h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
             </Button>
           </a>
         )}
@@ -118,33 +116,22 @@ const Events = () => {
       />
       <Header />
       <main>
-        <PageHeroBanner image={templeHero} title={t("events.title")} highlight={t("events.titleHighlight")} subtitle={t("events.subtitle")} mantra="ॐ नमः शिवाय" />
-
-        <section ref={revealInfo.ref} className={`py-10 md:py-16 bg-muted temple-pattern ${revealInfo.className}`}>
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto">
-              <Card className="text-center border-primary/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <CardContent className="p-5">
-                  <div className="w-12 h-12 rounded-full bg-gradient-saffron flex items-center justify-center mx-auto mb-3"><Calendar className="h-6 w-6 text-primary-foreground" /></div>
-                  <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-0.5">{t("events.yearRound")}</h3>
-                  <p className="text-xs text-muted-foreground">{t("events.yearRoundDesc")}</p>
-                </CardContent>
-              </Card>
-              <Card className="text-center border-gold/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <CardContent className="p-5">
-                  <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center mx-auto mb-3"><Bell className="h-6 w-6 text-gold" /></div>
-                  <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-0.5">{t("events.stayUpdated")}</h3>
-                  <p className="text-xs text-muted-foreground">{t("events.stayUpdatedDesc")}</p>
-                </CardContent>
-              </Card>
-              <Card className="text-center border-maroon/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <CardContent className="p-5">
-                  <div className="w-12 h-12 rounded-full bg-maroon/10 flex items-center justify-center mx-auto mb-3"><BookOpen className="h-6 w-6 text-maroon" /></div>
-                  <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-0.5">{t("events.specialPujas")}</h3>
-                  <p className="text-xs text-muted-foreground">{t("events.specialPujasDesc")}</p>
-                </CardContent>
-              </Card>
+        <section className="pt-8 md:pt-10 pb-6 bg-background">
+          <div className="container mx-auto px-4 text-center">
+            <div className="inline-flex items-center justify-center gap-3 mb-4">
+              <span className="inline-flex items-center rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold">
+                शिव उत्सव
+              </span>
             </div>
+            <h1 className="font-heading text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-gold via-orange to-saffron bg-clip-text text-transparent mb-4">
+              {t("events.title")}
+            </h1>
+            <div className="mx-auto max-w-3xl rounded-[2rem] border border-gold/20 bg-white/80 dark:bg-slate-900/70 p-6 shadow-[0_24px_60px_rgba(114,46,33,0.14)]">
+              <p className="text-gray-700 dark:text-gray-300 text-base md:text-lg leading-relaxed">
+                {t("events.subtitle")}
+              </p>
+            </div>
+            <span className="mt-6 block h-1.5 w-24 mx-auto rounded-full bg-gradient-to-r from-gold to-orange"></span>
           </div>
         </section>
 
@@ -161,11 +148,19 @@ const Events = () => {
         ) : (
           <>
             {upcoming.length > 0 && (
-              <section className="py-10 md:py-20 bg-background">
+              <section className="py-10 md:py-16 bg-gradient-to-b from-background via-background to-background dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
                 <div className="container mx-auto px-4">
-                  <div className="flex items-center gap-3 mb-6 md:mb-8">
-                    <Badge className="bg-primary/10 text-primary border-primary/20"><Calendar className="h-3 w-3 mr-1" />{t("common.upcoming")}</Badge>
-                    <h2 className="font-heading text-xl md:text-3xl font-bold text-foreground">{t("events.upcomingEvents")}</h2>
+                  <div className="mb-8 md:mb-10">
+                    <div className="inline-flex items-center gap-3 mb-4">
+                      <div className="h-12 w-1 bg-gradient-to-b from-gold to-orange rounded-full"></div>
+                      <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 px-4 py-2 font-bold">
+                        <Calendar className="h-4 w-4 mr-2 animate-pulse" />{t("common.upcoming")}
+                      </Badge>
+                    </div>
+                    <h2 className="font-heading text-3xl md:text-4xl font-bold text-gray-900 dark:text-white drop-shadow-lg">
+                      {t("events.upcomingEvents")}
+                      <span className="block text-gold/70 dark:text-gold text-lg md:text-xl mt-2">आने वाले विशेष समय की प्रतीक्षा करें</span>
+                    </h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {upcoming.map((e) => <EventCard key={e.id} event={e} />)}
@@ -175,11 +170,19 @@ const Events = () => {
             )}
             {upcoming.length > 0 && past.length > 0 && <TempleDivider />}
             {past.length > 0 && (
-              <section className="py-10 md:py-20 bg-muted temple-pattern">
+              <section className="py-10 md:py-16 bg-gradient-to-b from-gray-50 dark:from-slate-900/50 via-gray-50 dark:via-slate-900/50 to-background dark:to-slate-950">
                 <div className="container mx-auto px-4">
-                  <div className="flex items-center gap-3 mb-6 md:mb-8">
-                    <Badge className="bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20">{t("common.past")}</Badge>
-                    <h2 className="font-heading text-xl md:text-3xl font-bold text-foreground">{t("events.pastEvents")}</h2>
+                  <div className="mb-8 md:mb-10">
+                    <div className="inline-flex items-center gap-3 mb-4">
+                      <div className="h-12 w-1 bg-gradient-to-b from-gray-400 to-gray-500 rounded-full"></div>
+                      <Badge className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20 px-4 py-2 font-bold">
+                        📸 {t("common.past")}
+                      </Badge>
+                    </div>
+                    <h2 className="font-heading text-3xl md:text-4xl font-bold text-gray-900 dark:text-white drop-shadow-lg">
+                      {t("events.pastEvents")}
+                      <span className="block text-gray-600 dark:text-gray-400 text-lg md:text-xl mt-2">हमारी विरासत के शानदार पल</span>
+                    </h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {past.map((e) => <EventCard key={e.id} event={e} isPastEvent />)}

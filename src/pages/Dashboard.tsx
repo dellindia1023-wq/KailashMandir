@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,9 +94,9 @@ const Dashboard = () => {
     if (user) {
       fetchUserData();
     }
-  }, [user]);
+  }, [user, fetchUserData]);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
@@ -158,7 +158,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const removeFavorite = async (favoriteId: string) => {
     const { error } = await supabase
