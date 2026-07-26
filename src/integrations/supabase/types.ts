@@ -424,6 +424,72 @@ export type Database = {
         }
         Relationships: []
       }
+      campaigns: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string | null
+          type: string | null
+          status: string
+          priority: number
+          start_date: string | null
+          end_date: string | null
+          is_active: boolean
+          locations: Json
+          targeting_rules: Json
+          content: Json
+          ctas: Json
+          analytics: Json
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description?: string | null
+          type?: string | null
+          status?: string
+          priority?: number
+          start_date?: string | null
+          end_date?: string | null
+          is_active?: boolean
+          locations?: Json
+          targeting_rules?: Json
+          content?: Json
+          ctas?: Json
+          analytics?: Json
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          description?: string | null
+          type?: string | null
+          status?: string
+          priority?: number
+          start_date?: string | null
+          end_date?: string | null
+          is_active?: boolean
+          locations?: Json
+          targeting_rules?: Json
+          content?: Json
+          ctas?: Json
+          analytics?: Json
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           created_at: string

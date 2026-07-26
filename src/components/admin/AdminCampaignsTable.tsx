@@ -27,41 +27,41 @@ import { Campaign, CampaignAnalytics, CampaignContent, CampaignCTA, CampaignCont
 import CampaignRenderer from "@/components/campaigns/CampaignRenderer";
 
 const predefinedLocations = [
-  "homepage_hero",
-  "homepage_top_banner",
-  "homepage_cards",
-  "homepage_announcement_bar",
-  "sticky_header",
-  "sticky_footer",
-  "floating_widget",
+  "homepage.hero",
+  "homepage.top",
+  "homepage.cards",
+  "homepage.announcement",
+  "sticky.header",
+  "sticky.footer",
+  "floating.widget",
   "sidebar",
-  "knowledge_hub",
-  "knowledge_article",
-  "blog_listing",
-  "blog_article",
-  "donation_page",
-  "booking_page",
+  "knowledge.top",
+  "knowledge.article",
+  "blog.top",
+  "blog.article",
+  "donate.top",
+  "pujas.hero",
   "gallery",
-  "live_darshan",
-  "events",
+  "live-darshan.after-player",
+  "events.top",
   "contact",
   "about",
   "footer",
-  "exit_intent_popup",
-  "welcome_popup",
-  "newsletter_popup",
-  "mobile_bottom_sheet",
-  "mobile_floating_button",
-  "desktop_hero_slider",
-  "category_pages",
-  "tag_pages",
-  "search_results",
-  "404_page",
+  "exit-intent.popup",
+  "welcome.popup",
+  "newsletter.popup",
+  "mobile-bottom-sheet",
+  "mobile-floating-button",
+  "desktop.hero.slider",
+  "category.pages",
+  "tag.pages",
+  "search.results",
+  "404.page",
   "custom_route",
 ];
 
 const defaultTargeting = {
-  page_types: ["homepage"],
+  page_types: ["home"],
   url_contains: "",
   logged_in: "any",
   device: "any",
@@ -299,7 +299,7 @@ const AdminCampaignsTable = () => {
                 <Plus className="h-4 w-4 mr-2" /> New Campaign
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="font-heading text-xl">
                   {editingCampaign ? "Edit Campaign" : "Create Campaign"}

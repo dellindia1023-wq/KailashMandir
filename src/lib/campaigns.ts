@@ -73,6 +73,75 @@ export const DEFAULT_CAMPAIGN_ANALYTICS: CampaignAnalytics = {
   booking_count: 0,
 };
 
+const LOCATION_ALIASES: Record<string, string> = {
+  homepage_hero: "homepage.hero",
+  homepage_top_banner: "homepage.top",
+  homepage_cards: "homepage.cards",
+  homepage_announcement_bar: "homepage.announcement",
+  sticky_header: "sticky.header",
+  sticky_footer: "sticky.footer",
+  floating_widget: "floating.widget",
+  sidebar: "sidebar",
+  knowledge_hub: "knowledge.top",
+  knowledge_article: "knowledge.article",
+  blog_listing: "blog.top",
+  blog_article: "blog.article",
+  donation_page: "donate.top",
+  booking_page: "pujas.hero",
+  live_darshan: "live-darshan.after-player",
+  events: "events.top",
+  exit_intent_popup: "exit-intent.popup",
+  welcome_popup: "welcome.popup",
+  newsletter_popup: "newsletter.popup",
+  mobile_bottom_sheet: "mobile-bottom-sheet",
+  mobile_floating_button: "mobile-floating-button",
+  desktop_hero_slider: "desktop.hero.slider",
+  category_pages: "category.pages",
+  tag_pages: "tag.pages",
+  search_results: "search.results",
+  "404_page": "404.page",
+  custom_route: "custom_route",
+};
+
+const PAGE_TYPE_ALIASES: Record<string, string> = {
+  home: "home",
+  homepage: "home",
+  knowledge: "knowledge",
+  knowledge_hub: "knowledge",
+  blog: "blog",
+  blog_listing: "blog",
+  donate: "donate",
+  donation: "donate",
+  pujas: "pujas",
+  booking: "pujas",
+  events: "events",
+  "live-darshan": "live-darshan",
+  live_darshan: "live-darshan",
+  contact: "contact",
+  about: "about",
+  gallery: "gallery",
+  "category.pages": "category.pages",
+  category_pages: "category.pages",
+  "tag.pages": "tag.pages",
+  tag_pages: "tag.pages",
+  "search.results": "search.results",
+  search_results: "search.results",
+  "404.page": "404.page",
+  "404_page": "404.page",
+};
+
+export const normalizeCampaignLocation = (location: string): string => {
+  const normalized = location.trim().toLowerCase();
+  if (!normalized) return "";
+  return LOCATION_ALIASES[normalized] ?? normalized;
+};
+
+export const normalizeCampaignPageType = (pageType: string): string => {
+  const normalized = pageType.trim().toLowerCase();
+  if (!normalized) return "";
+  return PAGE_TYPE_ALIASES[normalized] ?? normalized;
+};
+
 export const getEffectiveCampaignStatus = (campaign: Campaign): CampaignStatus => {
   if (!campaign.is_active) return "archived";
   if (campaign.status === "archived") return "archived";
@@ -107,23 +176,34 @@ export const matchCampaignWithContext = (campaign: Campaign, context: CampaignCo
     return false;
   }
 
+  const rules = campaign.targeting_rules || {};
+
   const locationMatch = campaign.locations.some((location) => {
-    const normalized = location.trim().toLowerCase();
+    const normalized = normalizeCampaignLocation(location);
     if (!normalized) return false;
+
+    if (normalized === "custom_route") {
+      const customRoute = typeof rules.custom_route === "string" ? rules.custom_route.trim() : "";
+      return customRoute ? context.path === customRoute : false;
+    }
+
     if (normalized.startsWith("custom:")) {
       const customRoute = normalized.replace(/^custom:/, "").trim();
       return customRoute ? context.path === customRoute : false;
     }
+
     return normalized === context.location.toLowerCase();
   });
 
   if (!locationMatch) {
     return false;
   }
-
-  const rules = campaign.targeting_rules || {};
   if (rules.page_types && Array.isArray(rules.page_types) && rules.page_types.length > 0) {
-    if (!rules.page_types.includes(context.pageType)) return false;
+    const normalizedPageTypes = rules.page_types
+      .filter(Boolean)
+      .map((pageType) => normalizeCampaignPageType(String(pageType)));
+    const currentPageType = normalizeCampaignPageType(context.pageType);
+    if (!normalizedPageTypes.includes(currentPageType)) return false;
   }
 
   if (rules.url_contains && typeof rules.url_contains === "string") {
