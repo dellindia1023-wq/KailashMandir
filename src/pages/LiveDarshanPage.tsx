@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import SEOHead from "@/components/SEOHead";
 import Footer from "@/components/Footer";
+import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import LiveDarshan from "@/components/LiveDarshan";
 import useScrollReveal from "@/hooks/useScrollReveal";
 import shivaLingam from "@/assets/gallery/shivling-chandan.jpg";
@@ -68,6 +69,12 @@ const LiveDarshanPage = () => {
                 <LiveDarshan />
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="py-10 md:py-16 bg-background">
+          <div className="container mx-auto px-4">
+            <CampaignSlot locationKey="live-darshan.after-player" pageType="live-darshan" />
           </div>
         </section>
 

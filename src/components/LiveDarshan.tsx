@@ -16,7 +16,11 @@ interface StreamSettings {
   stream_type: "hls" | "youtube" | "upload";
 }
 
-const LiveDarshan = () => {
+interface LiveDarshanProps {
+  simple?: boolean;
+}
+
+const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
   const { t } = useLanguage();
   const [settings, setSettings] = useState<StreamSettings>({
     stream_url: "",
@@ -158,38 +162,41 @@ const LiveDarshan = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <Card className="bg-gold/5 dark:bg-slate-800/60 border-2 border-gold/30 dark:border-gold/50 hover:border-gold/50 dark:hover:border-gold/70 transition-all hover:shadow-lg group">
-                <CardContent className="p-6 text-center">
-                  <div className="mb-4 inline-flex p-3 rounded-2xl bg-gold/10 dark:bg-gold/30 group-hover:bg-gold/20 dark:group-hover:bg-gold/40 transition-all">
-                    <Video className="h-6 w-6 text-gold" />
-                  </div>
-                  <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.watchLive")}</p>
-                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.highQuality")}</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-saffron/5 dark:bg-slate-800/60 border-2 border-saffron/30 dark:border-saffron/50 hover:border-saffron/50 dark:hover:border-saffron/70 transition-all hover:shadow-lg group">
-                <CardContent className="p-6 text-center">
-                  <div className="mb-4 inline-flex p-3 rounded-2xl bg-saffron/10 dark:bg-saffron/30 group-hover:bg-saffron/20 dark:group-hover:bg-saffron/40 transition-all">
-                    <Sparkles className="h-6 w-6 text-saffron" />
-                  </div>
-                  <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.blessings")}</p>
-                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.blessingsFromAnywhere")}</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-orange/5 dark:bg-slate-800/60 border-2 border-orange/30 dark:border-orange/50 hover:border-orange/50 dark:hover:border-orange/70 transition-all hover:shadow-lg group">
-                <CardContent className="p-6 text-center">
-                  <div className="mb-4 inline-flex p-3 rounded-2xl bg-orange/10 dark:bg-orange/30 group-hover:bg-orange/20 dark:group-hover:bg-orange/40 transition-all">
-                    <Users className="h-6 w-6 text-orange" />
-                  </div>
-                  <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">24/7</p>
-                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.neverMiss")}</p>
-                </CardContent>
-              </Card>
-            </div>
+            {!simple && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <Card className="bg-gold/5 dark:bg-slate-800/60 border-2 border-gold/30 dark:border-gold/50 hover:border-gold/50 dark:hover:border-gold/70 transition-all hover:shadow-lg group">
+                  <CardContent className="p-6 text-center">
+                    <div className="mb-4 inline-flex p-3 rounded-2xl bg-gold/10 dark:bg-gold/30 group-hover:bg-gold/20 dark:group-hover:bg-gold/40 transition-all">
+                      <Video className="h-6 w-6 text-gold" />
+                    </div>
+                    <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.watchLive")}</p>
+                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.highQuality")}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-saffron/5 dark:bg-slate-800/60 border-2 border-saffron/30 dark:border-saffron/50 hover:border-saffron/50 dark:hover:border-saffron/70 transition-all hover:shadow-lg group">
+                  <CardContent className="p-6 text-center">
+                    <div className="mb-4 inline-flex p-3 rounded-2xl bg-saffron/10 dark:bg-saffron/30 group-hover:bg-saffron/20 dark:group-hover:bg-saffron/40 transition-all">
+                      <Sparkles className="h-6 w-6 text-saffron" />
+                    </div>
+                    <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.blessings")}</p>
+                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.blessingsFromAnywhere")}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-orange/5 dark:bg-slate-800/60 border-2 border-orange/30 dark:border-orange/50 hover:border-orange/50 dark:hover:border-orange/70 transition-all hover:shadow-lg group">
+                  <CardContent className="p-6 text-center">
+                    <div className="mb-4 inline-flex p-3 rounded-2xl bg-orange/10 dark:bg-orange/30 group-hover:bg-orange/20 dark:group-hover:bg-orange/40 transition-all">
+                      <Users className="h-6 w-6 text-orange" />
+                    </div>
+                    <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">24/7</p>
+                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.neverMiss")}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
 
-          <aside className="space-y-6">
+          {!simple && (
+            <aside className="space-y-6">
             <Card className="bg-gold/5 dark:bg-slate-800/60 border-2 border-gold/30 dark:border-gold/50 shadow-lg hover:shadow-xl transition-all">
               <CardContent className="p-7">
                 <p className="text-xs uppercase tracking-[0.4em] text-gold font-bold">{t("liveDarshan.featureBadge")}</p>
@@ -228,6 +235,7 @@ const LiveDarshan = () => {
               </CardContent>
             </Card>
           </aside>
+          )}
         </div>
       </div>
     </section>

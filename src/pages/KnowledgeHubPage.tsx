@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import TempleDivider from "@/components/TempleDivider";
 import SEOHead from "@/components/SEOHead";
@@ -146,6 +147,11 @@ export default function KnowledgeHubPage() {
       <ImageShimmer />
 
       <main>
+        <section className="py-10 md:py-16">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <CampaignSlot locationKey="knowledge.top" pageType="knowledge" />
+          </div>
+        </section>
         <TempleDivider />
 
         <section className="py-8 md:py-12 bg-gradient-to-br from-saffron/5 to-orange/5">

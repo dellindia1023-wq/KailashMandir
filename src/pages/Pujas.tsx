@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Heart, Clock, Search, Filter, Loader2, ArrowRight, Sparkles } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { PujaBookingDialog } from "@/components/PujaBookingDialog";
+import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import { useLanguage } from "@/contexts/LanguageContext";
 import aartiImg from "@/assets/gallery/shivling-shringar-1.jpg";
 
@@ -253,6 +254,12 @@ const Pujas = () => {
                 <span className="text-2xl text-gold animate-pulse">ॐ नमः शिवाय</span>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="py-10 md:py-12 bg-background">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <CampaignSlot locationKey="pujas.hero" pageType="pujas" />
           </div>
         </section>
 

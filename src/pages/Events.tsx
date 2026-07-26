@@ -12,6 +12,7 @@ import { Calendar, MapPin, ArrowRight, Loader2, Bell, BookOpen } from "lucide-re
 import { format, isPast } from "date-fns";
 import festivalImg from "@/assets/gallery/shivling-flowers-3.jpg";
 import { Link } from "react-router-dom";
+import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Event {
@@ -132,6 +133,12 @@ const Events = () => {
               </p>
             </div>
             <span className="mt-6 block h-1.5 w-24 mx-auto rounded-full bg-gradient-to-r from-gold to-orange"></span>
+          </div>
+        </section>
+
+        <section className="py-10 md:py-12 bg-background">
+          <div className="container mx-auto px-4">
+            <CampaignSlot locationKey="events.top" pageType="events" />
           </div>
         </section>
 

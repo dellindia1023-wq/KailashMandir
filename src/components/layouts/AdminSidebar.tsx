@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Calendar, BookOpen, Users, Heart,
-  Image, Megaphone, CalendarDays, ShieldCheck, Settings, Package, Crown, Shield, UserCircle, BarChart3, Edit3, BookMarked, HelpCircle, Clock, Info
+  Image, Megaphone, CalendarDays, ShieldCheck, Settings, Package, Crown, Shield, UserCircle, BarChart3, Edit3, BookMarked, HelpCircle, Clock, Info, Flag
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -30,6 +30,7 @@ const mainNav = [
 const contentNav = [
   { title: "Content Management", url: "/admin/content", icon: Edit3 },
   { title: "About Page", url: "/admin/about", icon: Info },
+  { title: "Campaigns", url: "/admin/campaigns", icon: Flag },
   { title: "Blogs", url: "/admin/blogs", icon: BookMarked },
   { title: "Knowledge Hub", url: "/admin/knowledge-hub", icon: HelpCircle },
   { title: "Events", url: "/admin/events", icon: CalendarDays },

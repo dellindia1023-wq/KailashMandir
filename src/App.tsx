@@ -59,6 +59,7 @@ const AdminPriests = lazy(() => import("./pages/admin/AdminPriests"));
 const AdminDonations = lazy(() => import("./pages/admin/AdminDonations"));
 const AdminEvents = lazy(() => import("./pages/admin/AdminEvents"));
 const AdminNotices = lazy(() => import("./pages/admin/AdminNotices"));
+const AdminCampaigns = lazy(() => import("./pages/admin/AdminCampaigns"));
 const AdminGallery = lazy(() => import("./pages/admin/AdminGallery"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
@@ -155,6 +156,7 @@ const routeDefinitions: RouteObject[] = [
       { path: "donations", element: <AdminDonations /> },
       { path: "events", element: <AdminEvents /> },
       { path: "notices", element: <AdminNotices /> },
+      { path: "campaigns", element: <AdminCampaigns /> },
       { path: "gallery", element: <AdminGallery /> },
       { path: "blogs", element: <AdminBlogsPage /> },
       { path: "knowledge-hub", element: <AdminKnowledgeHubPage /> },

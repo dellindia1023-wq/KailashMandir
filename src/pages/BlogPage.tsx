@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import TempleDivider from "@/components/TempleDivider";
 import SEOHead from "@/components/SEOHead";
@@ -99,6 +100,11 @@ export default function BlogPage() {
       />
 
       <main>
+        <section className="py-10 md:py-16">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <CampaignSlot locationKey="blog.top" pageType="blog" />
+          </div>
+        </section>
         <TempleDivider />
         <section className="py-12 md:py-16">
           <div className="container mx-auto px-4 space-y-10">
