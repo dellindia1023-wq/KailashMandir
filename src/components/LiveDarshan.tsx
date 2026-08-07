@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Video, Users, Wifi, Clock, Share2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import HLSVideoPlayer from "@/components/HLSVideoPlayer";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { DarshanScheduleSlot, formatScheduleTime, getDarshanWindowStatus, DarshanWindowStatus } from "@/lib/liveDarshanSchedule";
+import { fetchLiveStreamSettings, normalizeLiveStreamSettings, resolveLiveStreamState } from "@/lib/liveStreamSettings";
+
+type LiveStreamType = "hls" | "youtube" | "upload" | "mobile" | "rtmp" | "rtsp" | "webrtc";
 
 interface StreamSettings {
   stream_url: string;
@@ -13,7 +17,12 @@ interface StreamSettings {
   title: string;
   description: string | null;
   viewer_count: number;
-  stream_type: "hls" | "youtube" | "upload";
+  stream_type: LiveStreamType;
+  source_name: string;
+  backup_stream_url: string;
+  source_notes: string;
+  manual_override: boolean;
+  manual_live: boolean;
 }
 
 interface LiveDarshanProps {
@@ -29,63 +38,119 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
     description: "Watch the live darshan from Kailash Mahadev Temple Agra",
     viewer_count: 0,
     stream_type: "hls",
+    source_name: "Primary Camera",
+    backup_stream_url: "",
+    source_notes: "",
+    manual_override: false,
+    manual_live: false,
   });
   const [copied, setCopied] = useState(false);
+  const [scheduleSlots, setScheduleSlots] = useState<DarshanScheduleSlot[]>([]);
+  const [scheduleStatus, setScheduleStatus] = useState<DarshanWindowStatus | null>(null);
+  const [sources, setSources] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchSettings = async () => {
-      const { data, error } = await supabase
-        .from("live_stream_settings")
-        .select("stream_url, is_live, title, description, viewer_count, stream_type")
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await fetchLiveStreamSettings();
 
       if (!isMounted) return;
       if (error) {
-        console.error("Failed to load live stream settings:", error);
+        setLoadError("Unable to load live stream settings.");
         return;
       }
 
+      setLoadError(null);
       if (data) {
+        const normalized = normalizeLiveStreamSettings(data as any);
         setSettings({
-          stream_url: data.stream_url,
-          is_live: data.is_live,
-          title: data.title,
-          description: data.description,
-          viewer_count: data.viewer_count,
-          stream_type: data.stream_type || "hls",
+          stream_url: normalized.streamUrl,
+          is_live: normalized.isLive,
+          title: normalized.title,
+          description: normalized.description,
+          viewer_count: normalized.viewerCount,
+          stream_type: normalized.streamType as any,
+          source_name: normalized.sourceName,
+          backup_stream_url: normalized.backupStreamUrl,
+          source_notes: normalized.sourceNotes,
+          manual_override: normalized.manualOverride,
+          manual_live: normalized.manualLive,
         });
       }
+    };
+
+    const fetchSources = async () => {
+      const { data, error } = await supabase
+        .from("live_stream_sources")
+        .select("id, name, stream_url, backup_stream_url, source_type, current_status, is_primary, description, priority")
+        .eq("is_active", true)
+        .order("priority", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (!isMounted) return;
+      if (!error) {
+        setSources((data || []) as any[]);
+      }
+    };
+
+    const fetchSchedule = async () => {
+      const { data, error } = await supabase
+        .from("darshan_schedule")
+        .select("day_of_week, start_time, end_time, is_active, label")
+        .eq("is_active", true)
+        .order("day_of_week", { ascending: true })
+        .order("start_time", { ascending: true });
+
+      if (!isMounted) return;
+      if (error) {
+        setLoadError("Unable to load darshan schedule.");
+        return;
+      }
+
+      setLoadError(null);
+      const slots = (data || []) as DarshanScheduleSlot[];
+      setScheduleSlots(slots);
+      setScheduleStatus(getDarshanWindowStatus(new Date(), slots));
     };
 
     const syncScheduleStatus = async () => {
       try {
         await supabase.functions.invoke("toggle-live-stream");
-      } catch (syncError) {
-        console.error("Live schedule sync failed:", syncError);
+      } catch {
+        setLoadError("Unable to synchronize live schedule status.");
       } finally {
         fetchSettings();
+        fetchSchedule();
       }
     };
 
     fetchSettings();
+    fetchSources();
+    fetchSchedule();
     syncScheduleStatus();
     const intervalId = window.setInterval(syncScheduleStatus, 60_000);
 
     const channel = supabase.channel("live-stream-status")
       .on("postgres_changes", { event: "*", schema: "public", table: "live_stream_settings" }, (payload) => {
         const d = payload.new as any;
-        if (d)
+        if (d) {
+          const normalized = normalizeLiveStreamSettings(d);
           setSettings({
-            stream_url: d.stream_url,
-            is_live: d.is_live,
-            title: d.title,
-            description: d.description,
-            viewer_count: d.viewer_count,
-            stream_type: d.stream_type || "hls",
+            stream_url: normalized.streamUrl,
+            is_live: normalized.isLive,
+            title: normalized.title,
+            description: normalized.description,
+            viewer_count: normalized.viewerCount,
+            stream_type: normalized.streamType as any,
+            source_name: normalized.sourceName,
+            backup_stream_url: normalized.backupStreamUrl,
+            source_notes: normalized.sourceNotes,
+            manual_override: normalized.manualOverride,
+            manual_live: normalized.manualLive,
           });
+        }
       })
       .subscribe();
 
@@ -102,10 +167,74 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Unable to copy live stream link", error);
+    } catch {
+      setLoadError("Unable to copy live stream link.");
     }
   };
+
+  const resolvedLiveState = resolveLiveStreamState({
+    isLive: settings.is_live,
+    manualOverride: settings.manual_override,
+    manualLive: settings.manual_live,
+    scheduleInWindow: Boolean(scheduleStatus?.isInSchedule),
+  });
+
+  const displayIsLive = resolvedLiveState.isLive;
+
+  const activeSource = useMemo(() => {
+    const primary = sources.find((item) => item.is_primary) || sources[0];
+    return primary || null;
+  }, [sources]);
+
+  const effectiveStreamUrl = useMemo(() => {
+    return activeSource?.stream_url?.trim() || settings.stream_url;
+  }, [activeSource?.stream_url, settings.stream_url]);
+
+  const effectiveBackupStreamUrl = useMemo(() => {
+    return activeSource?.backup_stream_url?.trim() || settings.backup_stream_url;
+  }, [activeSource?.backup_stream_url, settings.backup_stream_url]);
+
+  const effectiveTitle = useMemo(() => {
+    return activeSource?.name || settings.title;
+  }, [activeSource?.name, settings.title]);
+
+  const effectiveDescription = useMemo(() => {
+    return activeSource?.description || settings.description;
+  }, [activeSource?.description, settings.description]);
+
+  const isYouTubeUrl = (url: string) => /(?:youtu\.be\/|youtube\.com\/)/i.test(url);
+  const isHlsUrl = (url: string) => /\.m3u8(\?|$)/i.test(url);
+  const isUploadUrl = (url: string) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(url);
+
+  const effectiveStreamType = useMemo<LiveStreamType>(() => {
+    const sourceType = activeSource?.source_type as LiveStreamType | undefined;
+    const resolvedSourceType = ["hls", "youtube", "upload", "mobile", "rtmp", "rtsp", "webrtc"].includes(sourceType || "")
+      ? (sourceType as LiveStreamType)
+      : settings.stream_type;
+
+    if (resolvedSourceType === "rtsp" && effectiveBackupStreamUrl) {
+      if (isYouTubeUrl(effectiveBackupStreamUrl)) return "youtube";
+      if (isHlsUrl(effectiveBackupStreamUrl)) return "hls";
+      if (isUploadUrl(effectiveBackupStreamUrl)) return "upload";
+      return settings.stream_type;
+    }
+
+    return resolvedSourceType;
+  }, [activeSource?.source_type, settings.stream_type, effectiveBackupStreamUrl]);
+
+  const statusDescription = displayIsLive
+    ? settings.manual_override
+      ? "Live now via manual override. The stream is active outside the scheduled window."
+      : scheduleStatus?.isInSchedule
+        ? `Live now during the ${scheduleStatus.currentSlot?.label || "current"} darshan window.`
+        : "Live now via manual override. The stream is active outside the scheduled window."
+    : scheduleStatus?.currentSlot
+      ? `Scheduled for ${formatScheduleTime(scheduleStatus.currentSlot.start_time)}–${formatScheduleTime(scheduleStatus.currentSlot.end_time)}${scheduleStatus.currentSlot.label ? ` (${scheduleStatus.currentSlot.label})` : ""}.`
+      : scheduleStatus?.nextSlot
+        ? `Next live slot starts at ${formatScheduleTime(scheduleStatus.nextSlot.start_time)}.`
+        : "The temple stream will appear during scheduled darshan hours.";
+
+  const liveBadgeLabel = displayIsLive ? t("liveDarshan.liveNow") : scheduleStatus?.isInSchedule ? "Scheduled Live" : t("liveDarshan.currentlyOffline");
 
   return (
     <section className="py-10 md:py-24 bg-maroon/70 dark:bg-maroon/95 text-foreground relative overflow-hidden border-t-4 border-gold/30">
@@ -119,15 +248,15 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
           <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <Badge className="bg-gold/15 dark:bg-gold/10 text-gold border-gold/30 dark:border-gold/20 shadow-md">
-                {settings.is_live ? (
+                {displayIsLive ? (
                   <>
                     <span className="w-2 h-2 rounded-full bg-destructive mr-2 inline-block animate-ping" />
-                    {t("liveDarshan.liveNow")}
+                    {liveBadgeLabel}
                   </>
                 ) : (
                   <>
                     <Clock className="h-3 w-3 mr-1" />
-                    {t("liveDarshan.currentlyOffline")}
+                    {liveBadgeLabel}
                   </>
                 )}
               </Badge>
@@ -148,51 +277,49 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
                 {t("liveDarshan.title")} <span className="bg-gradient-to-r from-gold via-orange to-saffron bg-clip-text text-transparent">{t("liveDarshan.titleHighlight")}</span>
               </h2>
               <p className="text-gray-800 dark:text-white/90 text-base md:text-lg max-w-3xl font-medium leading-relaxed">
-                {settings.description ?? t("liveDarshan.subtitle")}
+                {effectiveDescription ?? t("liveDarshan.subtitle")}
               </p>
+              <p className="mt-3 text-sm md:text-base text-muted-foreground max-w-3xl">
+                {statusDescription}
+              </p>
+              {loadError ? (
+                <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+                  <p className="font-semibold">Live darshan unavailable</p>
+                  <p className="mt-1 text-sm">{loadError} Please refresh the page or check your stream configuration.</p>
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm text-gray-700 dark:text-gray-300">
+                  <div className="rounded-2xl bg-white/10 dark:bg-slate-800/60 p-4 border border-white/10">
+                    <p className="font-semibold">Primary source</p>
+                    <p className="mt-1">{activeSource?.name || settings.source_name || "Primary Camera"}</p>
+                  </div>
+                <div className="rounded-2xl bg-white/10 dark:bg-slate-800/60 p-4 border border-white/10">
+                  <p className="font-semibold">Backup source</p>
+                  <p className="mt-1">{effectiveBackupStreamUrl ? "Configured" : "Not configured"}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 dark:bg-slate-800/60 p-4 border border-white/10">
+                  <p className="font-semibold">Stream mode</p>
+                  <p className="mt-1 uppercase">{settings.stream_type}</p>
+                </div>
+              </div>
+              )}
+              {settings.source_notes ? (
+                <p className="mt-4 text-sm text-gray-800 dark:text-gray-200 max-w-3xl leading-relaxed">
+                  {settings.source_notes}
+                </p>
+              ) : null}
             </div>
 
             <div className="rounded-3xl border-4 border-gold/40 dark:border-gold/50 bg-black/30 dark:bg-black/50 backdrop-blur-sm p-4 md:p-8 shadow-lg hover:shadow-2xl hover:shadow-gold/30 dark:hover:shadow-gold/40 transition-all duration-300">
               <HLSVideoPlayer
-                streamUrl={settings.stream_url}
-                isLive={settings.is_live}
-                title={settings.title}
+                streamUrl={effectiveStreamUrl}
+                backupStreamUrl={effectiveBackupStreamUrl}
+                isLive={displayIsLive}
+                title={effectiveTitle}
                 viewerCount={settings.viewer_count}
-                streamType={settings.stream_type}
+                streamType={effectiveStreamType}
               />
             </div>
-
-            {!simple && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <Card className="bg-gold/5 dark:bg-slate-800/60 border-2 border-gold/30 dark:border-gold/50 hover:border-gold/50 dark:hover:border-gold/70 transition-all hover:shadow-lg group">
-                  <CardContent className="p-6 text-center">
-                    <div className="mb-4 inline-flex p-3 rounded-2xl bg-gold/10 dark:bg-gold/30 group-hover:bg-gold/20 dark:group-hover:bg-gold/40 transition-all">
-                      <Video className="h-6 w-6 text-gold" />
-                    </div>
-                    <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.watchLive")}</p>
-                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.highQuality")}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-saffron/5 dark:bg-slate-800/60 border-2 border-saffron/30 dark:border-saffron/50 hover:border-saffron/50 dark:hover:border-saffron/70 transition-all hover:shadow-lg group">
-                  <CardContent className="p-6 text-center">
-                    <div className="mb-4 inline-flex p-3 rounded-2xl bg-saffron/10 dark:bg-saffron/30 group-hover:bg-saffron/20 dark:group-hover:bg-saffron/40 transition-all">
-                      <Sparkles className="h-6 w-6 text-saffron" />
-                    </div>
-                    <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">{t("liveDarshan.blessings")}</p>
-                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.blessingsFromAnywhere")}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-orange/5 dark:bg-slate-800/60 border-2 border-orange/30 dark:border-orange/50 hover:border-orange/50 dark:hover:border-orange/70 transition-all hover:shadow-lg group">
-                  <CardContent className="p-6 text-center">
-                    <div className="mb-4 inline-flex p-3 rounded-2xl bg-orange/10 dark:bg-orange/30 group-hover:bg-orange/20 dark:group-hover:bg-orange/40 transition-all">
-                      <Users className="h-6 w-6 text-orange" />
-                    </div>
-                    <p className="font-heading font-bold text-lg text-gray-900 dark:text-white">24/7</p>
-                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 font-medium">{t("liveDarshan.neverMiss")}</p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
 
           {!simple && (

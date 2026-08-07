@@ -16,48 +16,9 @@ import { PujaBookingDialog } from "@/components/PujaBookingDialog";
 import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import { useLanguage } from "@/contexts/LanguageContext";
 import aartiImg from "@/assets/gallery/shivling-shringar-1.jpg";
+import { getPujaCategoryLabel, getPujaImage, normalizePujaRecord, type NormalizedPuja } from "@/lib/pujaCms";
 
-// Import puja images
-import rudrabhishekImg from "@/assets/pujas/rudrabhishek.jpg";
-import laghuRudraImg from "@/assets/pujas/laghu-rudra.jpg";
-import mrityunjayaJaapImg from "@/assets/pujas/mrityunjaya-jaap.jpg";
-import shivChalisaImg from "@/assets/pujas/shiv-chalisa.jpg";
-import bilvarchanImg from "@/assets/pujas/bilvarchan.jpg";
-import mahaShivaratriImg from "@/assets/pujas/maha-shivaratri.jpg";
-import shravanSomvarImg from "@/assets/pujas/shravan-somvar.jpg";
-import dailyAartiImg from "@/assets/pujas/daily-aarti.jpg";
-
-// Map puja names to images
-const pujaImages: Record<string, string> = {
-  "Rudrabhishek": rudrabhishekImg,
-  "Laghu Rudra": laghuRudraImg,
-  "Maha Mrityunjaya Jaap": mrityunjayaJaapImg,
-  "Shiv Chalisa Path": shivChalisaImg,
-  "Bilvarchan Puja": bilvarchanImg,
-  "Maha Shivaratri Puja": mahaShivaratriImg,
-  "Shravan Somvar Puja": shravanSomvarImg,
-  "Daily Aarti Sponsorship": dailyAartiImg,
-};
-
-// Category default images
-const categoryImages: Record<string, string> = {
-  abhishekam: rudrabhishekImg,
-  jaap: mrityunjayaJaapImg,
-  path: shivChalisaImg,
-  puja: bilvarchanImg,
-  special: mahaShivaratriImg,
-  sponsorship: dailyAartiImg,
-};
-
-interface Puja {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  duration_minutes: number;
-  category: string;
-  image_url?: string | null;
-}
+interface Puja extends NormalizedPuja {}
 
 const Pujas = () => {
   const { user } = useAuth();
@@ -73,18 +34,34 @@ const Pujas = () => {
 
   const fetchPujas = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("pujas")
-        .select("*")
-        .eq("is_active", true)
-        .order("category", { ascending: true });
+      const selectQuery = "*, puja_media(*), puja_details(*), puja_booking_settings(*), puja_seo(*)";
+      let rows: Array<Record<string, unknown>> = [];
+
+      const { data, error } = await (supabase.from("pujas" as any) as any)
+        .select(selectQuery)
+        .eq("is_active", true);
 
       if (error) {
-        console.error("Error fetching pujas:", error);
-        toast.error("Failed to load pujas. Please try again.");
+        console.warn("Pujas query with nested relations failed, retrying without nested relations:", error);
+        const { data: fallbackData, error: fallbackError } = await (supabase.from("pujas" as any) as any)
+          .select("*")
+          .eq("is_active", true);
+
+        if (fallbackError) {
+          console.error("Error fetching pujas:", fallbackError);
+          toast.error("Failed to load pujas. Please try again.");
+          return;
+        }
+
+        rows = (fallbackData || []) as Array<Record<string, unknown>>;
       } else {
-        setPujas(data || []);
+        rows = (data || []) as Array<Record<string, unknown>>;
       }
+
+      const normalized = rows
+        .map((row) => normalizePujaRecord(row as any))
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+      setPujas(normalized);
     } catch (err) {
       console.error("Unexpected error fetching pujas:", err);
       toast.error("An unexpected error occurred.");
@@ -162,22 +139,15 @@ const Pujas = () => {
   const categories = ["all", ...new Set(pujas.map(p => p.category))];
 
   const filteredPujas = pujas.filter(puja => {
-    const matchesSearch = puja.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      puja.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const haystack = `${puja.name} ${puja.description} ${puja.subtitle}`.toLowerCase();
+    const matchesSearch = haystack.includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || puja.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const getCategoryLabel = (category: string) => {
-    const keyMap: Record<string, string> = {
-      abhishekam: "pujas.abhishekam",
-      jaap: "pujas.jaap",
-      path: "pujas.path",
-      puja: "pujas.puja",
-      special: "pujas.special",
-      sponsorship: "pujas.sponsorship",
-    };
-    return keyMap[category] ? t(keyMap[category]) : category.charAt(0).toUpperCase() + category.slice(1);
+    const label = getPujaCategoryLabel(category);
+    return label;
   };
 
   const revealSearch = useScrollReveal();
@@ -334,7 +304,7 @@ const Pujas = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
                 {filteredPujas.map((puja, index) => {
-                  const pujaImage = pujaImages[puja.name] || puja.image_url || categoryImages[puja.category] || rudrabhishekImg;
+                  const pujaImage = getPujaImage(puja, aartiImg);
                   
                   return (
                     <div key={puja.id} className="animate-in fade-in slide-in-from-bottom-6 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
@@ -383,7 +353,7 @@ const Pujas = () => {
                           <div className="flex items-center justify-between pb-4 border-b border-border/40">
                             <div className="flex items-center gap-2.5 text-sm bg-primary/10 px-3 py-2 rounded-lg">
                               <Clock className="h-4 w-4 text-primary" />
-                              <span className="font-semibold text-foreground">{puja.duration_minutes} {t("pujas.mins")}</span>
+                              <span className="font-semibold text-foreground">{puja.durationMinutes} {t("pujas.mins")}</span>
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-muted-foreground mb-1">Price</p>

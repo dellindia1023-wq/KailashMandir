@@ -6,7 +6,6 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import NoticeMarquee from "@/components/NoticeMarquee";
 import LiveDarshan from "@/components/LiveDarshan";
-import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import NextAartiCountdown from "@/components/NextAartiCountdown";
 import MobileHomeCards from "@/components/MobileHomeCards";
 import Footer from "@/components/Footer";
@@ -359,11 +358,7 @@ const Index = () => {
         <div className="mt-0">
           <LiveDarshan simple />
         </div>
-        <section className="py-10 md:py-16 bg-background">
-          <div className="container mx-auto px-4">
-            <CampaignSlot locationKey="homepage.hero" pageType="home" />
-          </div>
-        </section>
+        {/* Homepage hero campaigns removed to avoid duplicate live-darshan static card */}
         <NoticeMarquee />
         <NextAartiCountdown />
         {/* ═══ Sacred Mantra Ticker ═══ */}

@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import SEOHead from "@/components/SEOHead";
 import Footer from "@/components/Footer";
-import CampaignSlot from "@/components/campaigns/CampaignSlot";
+import CampaignCollection from "@/components/campaigns/CampaignCollection";
 import Donation from "@/components/Donation";
 
 const DonatePage = () => (
@@ -33,7 +33,7 @@ const DonatePage = () => (
     />
     <Header />
     <main className="pt-20 space-y-10">
-      <CampaignSlot locationKey="donate.top" pageType="donate" />
+      <CampaignCollection locationKey="donate.top" pageType="donate" />
       <Donation />
     </main>
     <Footer />

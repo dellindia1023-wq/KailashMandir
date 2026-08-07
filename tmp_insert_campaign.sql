@@ -1,0 +1,43 @@
+insert into public.campaigns (
+  id,
+  name,
+  slug,
+  description,
+  type,
+  status,
+  priority,
+  start_date,
+  end_date,
+  is_active,
+  locations,
+  targeting_rules,
+  content,
+  ctas,
+  analytics,
+  created_at,
+  updated_at,
+  created_by,
+  updated_by
+)
+values (
+  '11111111-1111-4111-8111-111111111111',
+  'Homepage Hero Campaign',
+  'homepage-hero-campaign',
+  'Temporary homepage verification campaign',
+  'Verification',
+  'running',
+  5,
+  now(),
+  now() + interval '30 days',
+  true,
+  '[["homepage.hero"]]'::jsonb,
+  '{"page_types": ["home"]}'::jsonb,
+  '{"headline": "Divine Blessings Await", "message": "Experience the sacred atmosphere of Kailash Mahadev Temple.", "image_url": "https://kailashmahadev.in/og-image.jpg", "mobile_image_url": "", "background_color": "#f7efe0", "badge": "Live"}'::jsonb,
+  '[{"id":"cta-1","label":"Explore Pujas","url":"/pujas","type":"link","icon":"","open_new_tab":false,"is_popup":false}]'::jsonb,
+  '{"impressions":0,"clicks":0,"conversions":0,"donation_amount":0,"booking_count":0,"views":0,"ctr":0,"bookings":0,"donations":0,"revenue":0}'::jsonb,
+  now(),
+  now(),
+  null,
+  null
+)
+on conflict (id) do nothing;

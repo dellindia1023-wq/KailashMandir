@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { capitalize } from "@/lib/text";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,12 +91,12 @@ const UserDonations = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 sm:flex-col sm:items-end">
-                  <Badge className={getTierColor(donation.tier)}>{donation.tier.charAt(0).toUpperCase() + donation.tier.slice(1)}</Badge>
-                  <Badge className={getStatusColor(donation.status)}>{donation.status.charAt(0).toUpperCase() + donation.status.slice(1)}</Badge>
+                  <Badge className={getTierColor(donation.tier)}>{capitalize(donation.tier)}</Badge>
+                  <Badge className={getStatusColor(donation.status)}>{capitalize(donation.status)}</Badge>
                   {donation.status === "completed" && (
                     <Button variant="ghost" size="sm" className="text-xs" onClick={() => generateReceipt({
-                      type: "donation", id: donation.id, name: `${donation.tier.charAt(0).toUpperCase() + donation.tier.slice(1)} Donation`, date: formatDate(donation.created_at), amount: donation.amount,
-                      details: { Tier: donation.tier.charAt(0).toUpperCase() + donation.tier.slice(1), "Transaction ID": donation.transaction_id || "—", "Payment Method": donation.payment_method || "—", Date: formatDate(donation.created_at) },
+                      type: "donation", id: donation.id, name: `${capitalize(donation.tier)} Donation`, date: formatDate(donation.created_at), amount: donation.amount,
+                      details: { Tier: capitalize(donation.tier), "Transaction ID": donation.transaction_id || "—", "Payment Method": donation.payment_method || "—", Date: formatDate(donation.created_at) },
                     })}>
                       <Download className="h-3 w-3 mr-1" /> Receipt
                     </Button>

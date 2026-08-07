@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { capitalize } from "@/lib/text";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +117,7 @@ const AdminDashboard = () => {
         tierCounts[d.tier] = (tierCounts[d.tier] || 0) + 1;
       });
       setDonationsByTier(Object.entries(tierCounts).map(([name, value]) => ({
-        name: name.charAt(0).toUpperCase() + name.slice(1), value
+        name: capitalize(name), value
       })));
 
     } catch (error) {

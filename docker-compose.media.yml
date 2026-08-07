@@ -1,0 +1,23 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx
+    restart: unless-stopped
+    ports:
+      - "1935:1935"
+      - "8554:8554"
+      - "8888:8888"
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
+      - "9997:9997"
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+      - ./recordings:/recordings
+    environment:
+      - MTX_LOGLEVEL=info
+      - MTX_RTMP_ADDRESS=:1935
+      - MTX_RTSP_ADDRESS=:8554
+      - MTX_HLS_ADDRESS=:8888
+      - MTX_WEBRTC_ADDRESS=:8555
+      - MTX_METRICS_ADDRESS=:9997
+    command: ["-config", "/mediamtx.yml"]

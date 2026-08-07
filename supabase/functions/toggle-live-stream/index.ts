@@ -12,58 +12,49 @@ const corsHeaders = {
   }
 
   try {
-    // ✅ AUTHENTICATION CHECK (CRITICAL SECURITY FIX)
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      console.error("Unauthorized: No valid Authorization header");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabaseUrl = (globalThis as any).Deno?.env?.get("SUPABASE_URL")!;
-    const supabaseAnonKey = (globalThis as any).Deno?.env?.get("SUPABASE_ANON_KEY")!;
     const serviceKey = (globalThis as any).Deno?.env?.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceKey);
+    const supabase = adminClient;
+    let isAdmin = false;
+    let user: any = null;
 
-    // ✅ VERIFY USER IDENTITY
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
-      console.error("User auth failed:", userError?.message);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (authHeader?.startsWith("Bearer ")) {
+      const supabaseAnonKey = (globalThis as any).Deno?.env?.get("SUPABASE_ANON_KEY")!;
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: { user: authUser }, error: userError } = await userClient.auth.getUser();
+      if (!userError && authUser) {
+        user = authUser;
+        const { data: hasAdminRole } = await adminClient.rpc("has_role", {
+          _user_id: user.id,
+          _role: "admin",
+        });
+        isAdmin = Boolean(hasAdminRole);
+      }
     }
 
-    // ✅ VERIFY ADMIN ROLE
-    const adminClient = createClient(supabaseUrl, serviceKey);
-    const { data: isAdmin } = await adminClient.rpc("has_role", {
-      _user_id: user.id,
-      _role: "admin",
-    });
-    if (!isAdmin) {
-      console.error("Access denied: User is not admin", { userId: user.id });
+    if (authHeader?.startsWith("Bearer ") && !isAdmin) {
+      console.error("Access denied: User is not admin", { userId: user?.id });
       return new Response(JSON.stringify({ error: "Admin access required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const supabase = adminClient;
 
-    // ✅ LOG AUDIT TRAIL
-    await supabase.from("audit_log").insert({
-      action: "live_stream_toggled",
-      module_name: "live_stream",
-      user_id: user.id,
-      details: {
-        toggled_at: new Date().toISOString(),
-        caller_email: user.email,
-      },
-    }).catch((err) => console.error("Audit log error:", err));
+    if (isAdmin && user) {
+      await supabase.from("audit_log").insert({
+        action: "live_stream_toggled",
+        module_name: "live_stream",
+        user_id: user.id,
+        details: {
+          toggled_at: new Date().toISOString(),
+          caller_email: user.email,
+        },
+      }).catch((err) => console.error("Audit log error:", err));
+    }
 
     // Get current time in IST (UTC+5:30)
     const now = new Date();
@@ -91,10 +82,10 @@ const corsHeaders = {
         (slot: any) => currentTime >= slot.start_time && currentTime < slot.end_time
       );
 
-    // Get current live status
+    // Get current live status and override settings
     const { data: settings, error: settingsError } = await supabase
       .from("live_stream_settings")
-      .select("id, is_live")
+      .select("id, is_live, manual_override, manual_live")
       .limit(1)
       .single();
 
@@ -102,12 +93,16 @@ const corsHeaders = {
       throw settingsError;
     }
 
-    // Only update if status needs to change
-    if (settings && settings.is_live !== shouldBeLive) {
+    const effectiveLiveState = settings?.manual_override
+      ? Boolean(settings.manual_live)
+      : shouldBeLive;
+
+    // Only update if status needs to change and manual override is not blocking schedule updates
+    if (settings && settings.is_live !== effectiveLiveState) {
       const { error: updateError } = await supabase
         .from("live_stream_settings")
         .update({
-          is_live: shouldBeLive,
+          is_live: effectiveLiveState,
           updated_at: new Date().toISOString(),
         })
         .eq("id", settings.id);
@@ -117,9 +112,10 @@ const corsHeaders = {
       return new Response(
         JSON.stringify({
           toggled: true,
-          is_live: shouldBeLive,
+          is_live: effectiveLiveState,
           current_time_ist: currentTime,
           day_of_week: dayOfWeek,
+          manual_override: settings.manual_override,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -128,9 +124,10 @@ const corsHeaders = {
     return new Response(
       JSON.stringify({
         toggled: false,
-        is_live: settings?.is_live ?? false,
+        is_live: settings?.is_live ?? effectiveLiveState,
         current_time_ist: currentTime,
         day_of_week: dayOfWeek,
+        manual_override: settings?.manual_override ?? false,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

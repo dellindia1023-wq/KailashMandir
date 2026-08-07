@@ -747,6 +747,276 @@ export type Database = {
         }
         Relationships: []
       }
+      live_stream_providers: {
+        Row: {
+          id: string
+          name: string
+          provider_type: string
+          config: Json
+          documentation_url: string | null
+          is_active: boolean
+          priority: number
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          provider_type: string
+          config?: Json
+          documentation_url?: string | null
+          is_active?: boolean
+          priority?: number
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          provider_type?: string
+          config?: Json
+          documentation_url?: string | null
+          is_active?: boolean
+          priority?: number
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      live_stream_sources: {
+        Row: {
+          id: string
+          provider_id: string | null
+          name: string
+          source_key: string
+          description: string | null
+          stream_url: string
+          backup_stream_url: string
+          source_type: string
+          current_status: string
+          priority: number
+          is_primary: boolean
+          is_active: boolean
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          provider_id?: string | null
+          name: string
+          source_key: string
+          description?: string | null
+          stream_url?: string
+          backup_stream_url?: string
+          source_type: string
+          current_status?: string
+          priority?: number
+          is_primary?: boolean
+          is_active?: boolean
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          provider_id?: string | null
+          name?: string
+          source_key?: string
+          description?: string | null
+          stream_url?: string
+          backup_stream_url?: string
+          source_type?: string
+          current_status?: string
+          priority?: number
+          is_primary?: boolean
+          is_active?: boolean
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      live_stream_sessions: {
+        Row: {
+          id: string
+          source_id: string
+          started_at: string
+          ended_at: string | null
+          started_by: string | null
+          stopped_by: string | null
+          viewer_count: number
+          peak_viewer_count: number
+          average_watch_seconds: number
+          recording_status: string
+          recording_url: string | null
+          status: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          source_id: string
+          started_at?: string
+          ended_at?: string | null
+          started_by?: string | null
+          stopped_by?: string | null
+          viewer_count?: number
+          peak_viewer_count?: number
+          average_watch_seconds?: number
+          recording_status?: string
+          recording_url?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          source_id?: string
+          started_at?: string
+          ended_at?: string | null
+          started_by?: string | null
+          stopped_by?: string | null
+          viewer_count?: number
+          peak_viewer_count?: number
+          average_watch_seconds?: number
+          recording_status?: string
+          recording_url?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      live_stream_events: {
+        Row: {
+          id: string
+          source_id: string
+          session_id: string | null
+          event_type: string
+          event_description: string | null
+          metadata: Json
+          performed_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          source_id: string
+          session_id?: string | null
+          event_type: string
+          event_description?: string | null
+          metadata?: Json
+          performed_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          source_id?: string
+          session_id?: string | null
+          event_type?: string
+          event_description?: string | null
+          metadata?: Json
+          performed_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      live_stream_analytics: {
+        Row: {
+          id: string
+          source_id: string
+          session_id: string | null
+          metric_date: string
+          viewer_count: number
+          peak_viewer_count: number
+          engagement_seconds: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          source_id: string
+          session_id?: string | null
+          metric_date: string
+          viewer_count?: number
+          peak_viewer_count?: number
+          engagement_seconds?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          source_id?: string
+          session_id?: string | null
+          metric_date?: string
+          viewer_count?: number
+          peak_viewer_count?: number
+          engagement_seconds?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      live_stream_permissions: {
+        Row: {
+          id: string
+          user_id: string
+          can_start: boolean
+          can_stop: boolean
+          can_pause: boolean
+          can_switch: boolean
+          can_manage_cameras: boolean
+          can_manage_schedule: boolean
+          can_manage_providers: boolean
+          can_upload_video: boolean
+          can_override_manual: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          can_start?: boolean
+          can_stop?: boolean
+          can_pause?: boolean
+          can_switch?: boolean
+          can_manage_cameras?: boolean
+          can_manage_schedule?: boolean
+          can_manage_providers?: boolean
+          can_upload_video?: boolean
+          can_override_manual?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          can_start?: boolean
+          can_stop?: boolean
+          can_pause?: boolean
+          can_switch?: boolean
+          can_manage_cameras?: boolean
+          can_manage_schedule?: boolean
+          can_manage_providers?: boolean
+          can_upload_video?: boolean
+          can_override_manual?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notices: {
         Row: {
           created_at: string
@@ -974,6 +1244,7 @@ export type Database = {
       pujas: {
         Row: {
           category: string | null
+          category_id: string | null
           created_at: string
           description: string | null
           duration_minutes: number | null
@@ -985,6 +1256,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
@@ -996,6 +1268,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
@@ -1006,6 +1279,270 @@ export type Database = {
           price?: number
         }
         Relationships: []
+      }
+      puja_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      puja_details: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon_url: string | null
+          long_description: string | null
+          puja_id: string
+          short_description: string | null
+          slug: string | null
+          subtitle: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon_url?: string | null
+          long_description?: string | null
+          puja_id: string
+          short_description?: string | null
+          slug?: string | null
+          subtitle?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon_url?: string | null
+          long_description?: string | null
+          puja_id?: string
+          short_description?: string | null
+          slug?: string | null
+          subtitle?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puja_details_puja_id_fkey"
+            columns: ["puja_id"]
+            isOneToOne: false
+            referencedRelation: "pujas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      puja_booking_settings: {
+        Row: {
+          booking_enabled: boolean
+          created_at: string | null
+          discount_price: number | null
+          donation_enabled: boolean
+          duration_minutes: number | null
+          estimated_completion: string | null
+          featured: boolean
+          home_puja: boolean
+          offline_puja: boolean
+          online_puja: boolean
+          popular: boolean
+          priority: number | null
+          praja_id?: string
+          puja_id: string
+          recommended: boolean
+          remote_puja?: string
+          sort_order: number
+          temple_puja: boolean
+          trending: boolean
+          updated_at: string | null
+          price: number
+        }
+        Insert: {
+          booking_enabled?: boolean
+          created_at?: string | null
+          discount_price?: number | null
+          donation_enabled?: boolean
+          duration_minutes?: number | null
+          estimated_completion?: string | null
+          featured?: boolean
+          home_puja?: boolean
+          offline_puja?: boolean
+          online_puja?: boolean
+          popular?: boolean
+          priority?: number | null
+          puja_id: string
+          recommended?: boolean
+          sort_order?: number
+          temple_puja?: boolean
+          trending?: boolean
+          updated_at?: string | null
+          price?: number
+        }
+        Update: {
+          booking_enabled?: boolean
+          created_at?: string | null
+          discount_price?: number | null
+          donation_enabled?: boolean
+          duration_minutes?: number | null
+          estimated_completion?: string | null
+          featured?: boolean
+          home_puja?: boolean
+          offline_puja?: boolean
+          online_puja?: boolean
+          popular?: boolean
+          priority?: number | null
+          puja_id?: string
+          recommended?: boolean
+          sort_order?: number
+          temple_puja?: boolean
+          trending?: boolean
+          updated_at?: string | null
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puja_booking_settings_puja_id_fkey"
+            columns: ["puja_id"]
+            isOneToOne: false
+            referencedRelation: "pujas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      puja_seo: {
+        Row: {
+          created_at: string | null
+          puja_id: string
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          puja_id: string
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          puja_id?: string
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puja_seo_puja_id_fkey"
+            columns: ["puja_id"]
+            isOneToOne: false
+            referencedRelation: "pujas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      puja_media: {
+        Row: {
+          alt_text: string | null
+          created_at: string | null
+          id: string
+          is_primary: boolean
+          media_type: string | null
+          puja_id: string
+          role: string
+          sort_order: number
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+          media_type?: string | null
+          puja_id: string
+          role: string
+          sort_order?: number
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+          media_type?: string | null
+          puja_id?: string
+          role?: string
+          sort_order?: number
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puja_media_puja_id_fkey"
+            columns: ["puja_id"]
+            isOneToOne: false
+            referencedRelation: "pujas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      puja_benefits: {
+        Row: {
+          benefit: string
+          created_at: string | null
+          id: string
+          puja_id: string
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          benefit: string
+          created_at?: string | null
+          id?: string
+          puja_id: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          benefit?: string
+          created_at?: string | null
+          id?: string
+          puja_id?: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puja_benefits_puja_id_fkey"
+            columns: ["puja_id"]
+            isOneToOne: false
+            referencedRelation: "pujas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_notification_prefs: {
         Row: {

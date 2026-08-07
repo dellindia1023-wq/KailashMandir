@@ -1,0 +1,51 @@
+# MediaMTX configuration for the temple live-darshan backend.
+# This file is designed to be deployed with Docker and connected to Supabase.
+logLevel: info
+readTimeout: 10s
+writeTimeout: 10s
+
+rtmp: yes
+rtmpAddress: :1935
+
+rtsp: yes
+rtspAddress: :8554
+
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsSegmentDuration: 2s
+hlsPartDuration: 1s
+
+webrtc: yes
+webrtcAddress: :8555
+webrtcAllowOrigin: yes
+webrtcICEServers2:
+  - url: stun:stun.l.google.com:19302
+
+metrics: yes
+metricsAddress: :9997
+
+# Disable auth by default; set these values in production on the VPS.
+authMethod: none
+# authUsername: temple
+# authPassword: change-me
+
+paths:
+  all:
+    source: publisher
+    sourceOnDemand: false
+    runOnDemand: false
+    record: yes
+    recordPath: /recordings
+    recordFormat: fmp4
+    recordPartDuration: 10s
+    hls: yes
+    hlsAllowOrigin: yes
+    hlsVariant: lowLatency
+    hlsSegmentDuration: 2s
+    hlsPartDuration: 1s
+    webrtc: yes
+    webrtcAllowOrigin: yes
+    rtsp: yes
+    rtspTransport: tcp

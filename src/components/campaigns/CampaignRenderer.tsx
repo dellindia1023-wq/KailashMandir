@@ -29,14 +29,23 @@ const CampaignRenderer = ({ campaign }: CampaignRendererProps) => {
     incrementCampaignImpression(campaign.id);
   }, [campaign?.id]);
 
-  const backgroundStyle = campaign.content?.image_url
-    ? { backgroundImage: `url(${campaign.content.image_url})` }
-    : { backgroundColor: campaign.content?.background_color || "#f7f0e8" };
+  const donationAmount = (campaign.content as any)?.default_full_amount;
+  const customAmountUrl = "/donate";
+  const fullAmountUrl = donationAmount ? `/donate?amount=${donationAmount}` : "/donate";
+
+  const backgroundStyle = campaign.content?.background_color || "#f7f0e8";
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-border bg-white shadow-[0_20px_80px_rgba(0,0,0,0.08)]">
-      <div className="absolute inset-0 opacity-80 bg-cover bg-center" style={backgroundStyle} />
-      <div className="relative z-10 p-6 md:p-10 bg-background/80 backdrop-blur-sm">
+      <div className="relative z-10 bg-background/80 backdrop-blur-sm">
+        {campaign.content?.image_url ? (
+          <div className="w-full overflow-hidden rounded-t-3xl">
+            <img src={campaign.content.image_url} alt={campaign.content.headline || campaign.name} className="w-full h-44 object-cover" />
+          </div>
+        ) : (
+          <div className="h-6 w-full" style={{ backgroundColor: backgroundStyle }} />
+        )}
+        <div className="p-6 md:p-10">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             {campaign.content?.badge && (
@@ -54,50 +63,109 @@ const CampaignRenderer = ({ campaign }: CampaignRendererProps) => {
           <p className="text-sm md:text-base text-foreground/90 max-w-3xl mb-6">{campaign.content.message}</p>
         )}
 
+        {/* Donation-specific visuals: icon, gallery, progress */}
+        {(campaign.type || "").toLowerCase() === "donation" || (campaign.content as any)?.target_amount ? (
+          <div className="mb-4">
+            <div className="flex items-center gap-4 mb-3">
+              {(campaign.content as any)?.icon ? (
+                <img src={(campaign.content as any).icon} alt="icon" className="h-10 w-10 rounded-full object-cover" />
+              ) : null}
+              <div className="flex-1">
+                {typeof (campaign.content as any)?.target_amount === "number" ? (
+                  <div className="text-sm text-muted-foreground">Target: ₹{(campaign.content as any).target_amount.toLocaleString()}</div>
+                ) : null}
+                <div className="text-sm text-muted-foreground">Raised: ₹{campaign.analytics?.donation_amount ?? 0}</div>
+                {typeof (campaign.content as any)?.target_amount === "number" ? (
+                  <div className="w-full bg-muted rounded-full h-2 mt-2 overflow-hidden">
+                    <div
+                      className="h-2 bg-primary"
+                      style={{ width: `${Math.min(100, Math.round(((campaign.analytics?.donation_amount || 0) / ((campaign.content as any).target_amount || 1)) * 100))}%` }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {(campaign.content as any)?.gallery && Array.isArray((campaign.content as any).gallery) && (campaign.content as any).gallery.length > 0 ? (
+              <div className="flex gap-2 overflow-x-auto mb-4">
+                {((campaign.content as any).gallery as string[]).slice(0, 5).map((src, i) => (
+                  <img key={i} src={src} alt={`gallery-${i}`} className="h-16 w-24 object-cover rounded-md" />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          {(campaign.ctas || []).map((cta) => {
-            const isExternal = cta.url.startsWith("http") || cta.type === "external";
-            const target = cta.open_new_tab ? "_blank" : "_self";
-            const buttonContent = (
-              <span className="inline-flex items-center gap-2">
-                {iconForType(cta.type)}
-                {cta.label}
-              </span>
-            );
+          {/* Donation-specific rendering: two CTAs (Full amount, Custom amount) */}
+          {(campaign.type || "").toLowerCase() === "donation" || donationAmount ? (
+            (() => {
+              const handleClick = () => { if (campaign.id) incrementCampaignClick(campaign.id); };
 
-            const handleClick = () => {
-              if (!campaign.id) return;
-              incrementCampaignClick(campaign.id);
-            };
-
-            if (isExternal) {
               return (
-                <a
-                  key={cta.id}
-                  href={cta.url}
-                  target={target}
-                  rel={cta.open_new_tab ? "noreferrer noopener" : undefined}
-                  onClick={handleClick}
-                  className="w-full sm:w-auto"
-                >
-                  <Button variant="secondary" className="w-full sm:w-auto">
+                <>
+                  <Link to={fullAmountUrl} onClick={handleClick} className="w-full sm:w-auto">
+                    <Button className="w-full sm:w-auto" style={{ backgroundColor: (campaign.content as any)?.button_color || undefined }}>
+                      <span className="inline-flex items-center gap-2">{iconForType("payment")} Donate Full Amount</span>
+                    </Button>
+                  </Link>
+
+                  <Link to={customAmountUrl} onClick={handleClick} className="w-full sm:w-auto">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <span className="inline-flex items-center gap-2">{iconForType("payment")} Donate Custom Amount</span>
+                    </Button>
+                  </Link>
+                </>
+              );
+            })()
+          ) : (
+            (campaign.ctas || []).map((cta) => {
+              const isExternal = cta.url.startsWith("http") || cta.type === "external";
+              const target = cta.open_new_tab ? "_blank" : "_self";
+              const buttonContent = (
+                <span className="inline-flex items-center gap-2">
+                  {iconForType(cta.type)}
+                  {cta.label}
+                </span>
+              );
+
+              const handleClick = () => {
+                if (!campaign.id) return;
+                incrementCampaignClick(campaign.id);
+              };
+
+              const variant = cta.type === "payment" ? "default" : "secondary";
+
+              if (isExternal) {
+                return (
+                  <a
+                    key={cta.id}
+                    href={cta.url}
+                    target={target}
+                    rel={cta.open_new_tab ? "noreferrer noopener" : undefined}
+                    onClick={handleClick}
+                    className="w-full sm:w-auto"
+                  >
+                    <Button variant={variant} className="w-full sm:w-auto">
+                      {buttonContent}
+                    </Button>
+                  </a>
+                );
+              }
+
+              return (
+                <Link key={cta.id} to={cta.url} onClick={handleClick} className="w-full sm:w-auto">
+                  <Button variant={variant} className="w-full sm:w-auto">
                     {buttonContent}
                   </Button>
-                </a>
+                </Link>
               );
-            }
-
-            return (
-              <Link key={cta.id} to={cta.url} onClick={handleClick} className="w-full sm:w-auto">
-                <Button variant="secondary" className="w-full sm:w-auto">
-                  {buttonContent}
-                </Button>
-              </Link>
-            );
-          })}
+            })
+          )}
         </div>
       </div>
-    </section>
+    </div>
+  </section>
   );
 };
 

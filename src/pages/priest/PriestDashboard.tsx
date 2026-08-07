@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import PriestCompletionPanel from "@/components/priest/PriestCompletionPanel";
 import {
   Loader2, Calendar, Clock, User,
   CheckCircle2, Circle, RefreshCw, BookOpen, AlertCircle
@@ -37,6 +38,7 @@ const PriestDashboard = () => {
   const [bookings, setBookings] = useState<AssignedBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) fetchData();
@@ -203,6 +205,7 @@ const PriestDashboard = () => {
                     <TableHead>Devotee</TableHead>
                     <TableHead>Instructions</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Completion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -278,6 +281,11 @@ const PriestDashboard = () => {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedBookingId(booking.id)}>
+                            Open workflow
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -287,6 +295,12 @@ const PriestDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {selectedBookingId && (
+        <div className="mt-8">
+          <PriestCompletionPanel bookingId={selectedBookingId} bookingLabel={selectedBookingId.slice(0, 8).toUpperCase()} onSaved={() => fetchData()} />
+        </div>
+      )}
     </div>
   );
 };

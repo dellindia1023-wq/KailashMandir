@@ -1,8 +1,8 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClientContext, useQuery } from "@tanstack/react-query";
+import { useContext } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo } from "react";
-import { matchCampaignWithContext, type Campaign, type CampaignContext, type CampaignCTA } from "@/lib/campaigns";
+import { fromSupabaseCampaignRow, matchCampaignWithContext, type Campaign, type CampaignContext, type SupabaseCampaignRow } from "@/lib/campaigns";
 
 export type CampaignStatus = "draft" | "scheduled" | "running" | "paused" | "expired" | "archived";
 
@@ -24,27 +24,7 @@ export interface CampaignContent {
   countdown_target?: string;
 }
 
-export interface CampaignRow {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  type: string | null;
-  status: CampaignStatus;
-  priority: number | null;
-  start_date: string | null;
-  end_date: string | null;
-  is_active: boolean;
-  locations: string[];
-  targeting_rules: Record<string, any>;
-  content: CampaignContent;
-  ctas: CampaignCTA[];
-  analytics: CampaignAnalytics;
-  created_by: string | null;
-  updated_by: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
+export interface CampaignRow extends SupabaseCampaignRow {}
 
 export const fetchCampaigns = async (): Promise<CampaignRow[]> => {
   const { data, error } = await supabase
@@ -53,15 +33,63 @@ export const fetchCampaigns = async (): Promise<CampaignRow[]> => {
     .order("priority", { ascending: true });
 
   if (error) throw error;
-  return (data as CampaignRow[]) || [];
+  return ((data || []) as SupabaseCampaignRow[]).map((row) => fromSupabaseCampaignRow(row));
 };
 
 export const useCampaigns = (context: CampaignContext, enabled = true) => {
+  const queryClient = useContext(QueryClientContext);
+
+  if (!queryClient) {
+    return {
+      data: [] as Campaign[],
+      isLoading: false,
+      isError: false,
+      error: null,
+    };
+  }
+
   const query = useQuery({
     queryKey: ["campaigns", context],
     queryFn: async () => {
       const campaigns = await fetchCampaigns();
-      return campaigns.filter((campaign) => matchCampaignWithContext(campaign, context));
+      return campaigns.filter((campaign) => matchCampaignWithContext(campaign as Campaign, context));
+    },
+    enabled,
+    staleTime: 1000 * 60 * 2,
+    refetchOnWindowFocus: false,
+  });
+
+  return query;
+};
+
+export const fetchCampaignBySlug = async (slug: string) => {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return fromSupabaseCampaignRow(data as SupabaseCampaignRow);
+};
+
+export const useCampaignBySlug = (slug: string | null | undefined, enabled = true) => {
+  const queryClient = useContext(QueryClientContext);
+
+  if (!queryClient || !slug) {
+    return {
+      data: null as Campaign | null,
+      isLoading: false,
+      isError: false,
+      error: null,
+    };
+  }
+
+  const query = useQuery({
+    queryKey: ["campaign", slug],
+    queryFn: async () => {
+      return await fetchCampaignBySlug(slug);
     },
     enabled,
     staleTime: 1000 * 60 * 2,

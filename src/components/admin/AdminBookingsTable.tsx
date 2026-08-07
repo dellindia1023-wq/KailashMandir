@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Search, RefreshCw, UserPlus, Download, Mail } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
@@ -11,6 +14,7 @@ import { format } from "date-fns";
 import { AssignPriestDialog } from "./AssignPriestDialog";
 import { toast } from "sonner";
 import { Trash2, CreditCard, RefreshCw as RefreshIcon } from "lucide-react";
+import { deleteCompletionMedia, fetchCompletionForBooking, getCompletionSettings, getCompletionWorkflowSummary, getVisibleCompletionMedia, setCompletionApprovalRequirement, updateCompletionMedia, updateCompletionRecordStatus, type CompletionApprovalStatus, type CompletionMediaItem, type CompletionRecord } from "@/lib/pujaCompletion";
 
 interface Booking {
   id: string;
@@ -38,11 +42,15 @@ export const AdminBookingsTable = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [completionMap, setCompletionMap] = useState<Record<string, { record: CompletionRecord | null; media: CompletionMediaItem[] }>>({});
+  const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewingAction, setReviewingAction] = useState(false);
+  const [approvalRequired, setApprovalRequired] = useState(true);
 
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      // First get bookings with pujas
       const { data: bookingsData, error } = await supabase
         .from("puja_bookings")
         .select("id, user_id, puja_id, devotee_name, devotee_gotra, booking_date, booking_time, amount, payment_status, booking_status, assigned_priest_id, special_instructions, created_at, updated_at, pujas(name)")
@@ -50,11 +58,12 @@ export const AdminBookingsTable = () => {
 
       if (error) throw error;
 
-      // If we have bookings with assigned priests, fetch their profiles
       const bookingsWithPriests = bookingsData || [];
       const priestIds = [...new Set(bookingsWithPriests
         .filter(b => b.assigned_priest_id)
         .map(b => b.assigned_priest_id))];
+
+      let enrichedBookings = bookingsWithPriests;
 
       if (priestIds.length > 0) {
         const { data: profilesData } = await supabase
@@ -62,16 +71,27 @@ export const AdminBookingsTable = () => {
           .select("user_id, full_name")
           .in("user_id", priestIds);
 
-        // Map profiles to bookings
         const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]) || []);
-        const enrichedBookings = bookingsWithPriests.map(b => ({
+        enrichedBookings = bookingsWithPriests.map(b => ({
           ...b,
           assigned_priest: b.assigned_priest_id ? profilesMap.get(b.assigned_priest_id) || null : null
         }));
-        setBookings(enrichedBookings);
-      } else {
-        setBookings(bookingsWithPriests);
       }
+
+      setBookings(enrichedBookings);
+
+      const completionEntries = await Promise.all(
+        enrichedBookings.map(async (booking) => {
+          try {
+            const { record, media } = await fetchCompletionForBooking(booking.id);
+            return [booking.id, { record, media }] as const;
+          } catch {
+            return [booking.id, { record: null, media: [] }] as const;
+          }
+        })
+      );
+
+      setCompletionMap(Object.fromEntries(completionEntries));
     } catch (error) {
       console.error("Error fetching bookings:", error);
     } finally {
@@ -80,7 +100,20 @@ export const AdminBookingsTable = () => {
   };
 
   useEffect(() => {
-    fetchBookings();
+    void fetchBookings();
+  }, []);
+
+  useEffect(() => {
+    const loadApprovalSettings = async () => {
+      try {
+        const settings = await getCompletionSettings();
+        setApprovalRequired(settings?.approval_required ?? true);
+      } catch (error) {
+        console.error("Failed to load completion settings", error);
+      }
+    };
+
+    void loadApprovalSettings();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -102,6 +135,71 @@ export const AdminBookingsTable = () => {
     const matchesStatus = statusFilter === "all" || booking.payment_status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleReviewDecision = async (status: CompletionApprovalStatus) => {
+    if (!reviewBookingId) return;
+    const reviewData = completionMap[reviewBookingId];
+    if (!reviewData?.record) return;
+
+    setReviewingAction(true);
+    try {
+      const updated = await updateCompletionRecordStatus(reviewData.record.id, {
+        approval_status: status,
+        approval_required: approvalRequired,
+        admin_notes: reviewNotes || null,
+        approved_at: status === "approved" ? new Date().toISOString() : null,
+      });
+      setCompletionMap((prev) => ({
+        ...prev,
+        [reviewBookingId]: {
+          ...reviewData,
+          record: updated,
+        },
+      }));
+      toast.success(`Completion marked as ${status}`);
+    } catch (error) {
+      console.error("Failed to update completion status", error);
+      toast.error("Failed to update completion status");
+    } finally {
+      setReviewingAction(false);
+    }
+  };
+
+  const handleMediaAction = async (mediaId: string, action: "hide" | "show" | "delete") => {
+    const reviewData = reviewBookingId ? completionMap[reviewBookingId] : null;
+    if (!reviewData) return;
+
+    try {
+      if (action === "delete") {
+        await deleteCompletionMedia(mediaId);
+      } else {
+        const mediaItem = reviewData.media.find((item) => item.id === mediaId);
+        if (!mediaItem) return;
+        await updateCompletionMedia(mediaId, { is_hidden: action === "hide" });
+      }
+
+      const refreshed = await fetchCompletionForBooking(reviewBookingId!);
+      setCompletionMap((prev) => ({
+        ...prev,
+        [reviewBookingId!]: refreshed,
+      }));
+    } catch (error) {
+      console.error("Failed to update media", error);
+      toast.error("Failed to update media");
+    }
+  };
+
+  const handleToggleApprovalRequirement = async () => {
+    try {
+      const nextValue = !approvalRequired;
+      const settings = await setCompletionApprovalRequirement(nextValue);
+      setApprovalRequired(settings?.approval_required ?? nextValue);
+      toast.success(`Approval requirement ${nextValue ? "enabled" : "disabled"}`);
+    } catch (error) {
+      console.error("Failed to update approval setting", error);
+      toast.error("Failed to update approval setting");
+    }
+  };
 
   const getSessionAccessToken = async () => {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -137,6 +235,11 @@ export const AdminBookingsTable = () => {
 
     toast.error(message || fallbackMessage);
   };
+
+  const selectedReviewBooking = bookings.find((booking) => booking.id === reviewBookingId) || null;
+  const selectedReviewData = reviewBookingId ? completionMap[reviewBookingId] : null;
+  const selectedReviewSummary = getCompletionWorkflowSummary(selectedReviewData?.record ?? null, selectedReviewData?.media ?? []);
+  const visibleReviewMedia = getVisibleCompletionMedia(selectedReviewData?.media ?? []);
 
   const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(":");
@@ -218,6 +321,7 @@ export const AdminBookingsTable = () => {
               <TableHead>Amount</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Assigned Priest</TableHead>
+              <TableHead>Completion</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -259,7 +363,24 @@ export const AdminBookingsTable = () => {
                     )}
                   </TableCell>
                   <TableCell>
+                    {(() => {
+                      const completionSummary = getCompletionWorkflowSummary(completionMap[booking.id]?.record ?? null, completionMap[booking.id]?.media ?? []);
+                      return <Badge variant={completionSummary.badgeVariant as any}>{completionSummary.badgeLabel}</Badge>;
+                    })()}
+                  </TableCell>
+                  <TableCell>
                     <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setReviewBookingId(booking.id);
+                          setReviewNotes(completionMap[booking.id]?.record?.admin_notes ?? "");
+                        }}
+                      >
+                        Review
+                      </Button>
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -356,6 +477,73 @@ export const AdminBookingsTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {reviewBookingId && selectedReviewBooking && (
+        <Card className="border-primary/20 bg-background">
+          <CardHeader>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-lg">Review completion for {selectedReviewBooking.devotee_name}</CardTitle>
+                <CardDescription>
+                  Approve, request revision, or reject the priest’s completion report and manage visibility of shared media.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">Approval required: {approvalRequired ? "On" : "Off"}</Badge>
+                <Button variant="outline" size="sm" onClick={handleToggleApprovalRequirement}>Toggle</Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedReviewData?.record ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={selectedReviewSummary.badgeVariant as any}>{selectedReviewSummary.badgeLabel}</Badge>
+                      <Badge variant="outline">Dispatch: {selectedReviewData.record.prasad_dispatch_status}</Badge>
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">{selectedReviewData.record.completion_notes || "No completion notes recorded yet."}</p>
+                    {selectedReviewData.record.courier_tracking_number && <p className="mt-2 text-sm">Tracking: {selectedReviewData.record.courier_tracking_number}</p>}
+                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <Label className="text-sm">Admin notes</Label>
+                    <Textarea value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} placeholder="Add review notes for the priest or devotee" className="mt-2" />
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => void handleReviewDecision("approved")} disabled={reviewingAction}>Approve</Button>
+                      <Button size="sm" variant="outline" onClick={() => void handleReviewDecision("needs_revision")} disabled={reviewingAction}>Needs Revision</Button>
+                      <Button size="sm" variant="destructive" onClick={() => void handleReviewDecision("rejected")} disabled={reviewingAction}>Reject</Button>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedReviewData.media.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Media review</h4>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {selectedReviewData.media.map((item) => (
+                        <div key={item.id} className="rounded-xl border p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <Badge variant="secondary">{item.media_type}</Badge>
+                            <Badge variant={item.is_hidden ? "outline" : "default"}>{item.is_hidden ? "Hidden" : "Visible"}</Badge>
+                          </div>
+                          <p className="mt-2 break-all text-sm text-muted-foreground">{item.url}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button variant="outline" size="sm" onClick={() => void handleMediaAction(item.id, item.is_hidden ? "show" : "hide")}>{item.is_hidden ? "Show" : "Hide"}</Button>
+                            <Button variant="destructive" size="sm" onClick={() => void handleMediaAction(item.id, "delete")}>Delete</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">No completion workflow has been created for this booking yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <p className="text-sm text-muted-foreground">
         Showing {filteredBookings.length} of {bookings.length} bookings

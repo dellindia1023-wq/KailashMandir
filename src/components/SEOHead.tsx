@@ -189,12 +189,6 @@ const SEOHead = ({
     };
 
     setLink("alternate", canonicalUrl, "hreflang-en", { hreflang: "en" });
-    setLink(
-      "alternate",
-      `${canonicalUrl}${canonicalUrl.includes("?") ? "&" : "?"}lang=hi`,
-      "hreflang-hi",
-      { hreflang: "hi" }
-    );
     setLink("alternate", canonicalUrl, "hreflang-x-default", { hreflang: "x-default" });
     setLink("author", `${BASE_URL}/llms.txt`, "llms-txt", { type: "text/plain", title: "AI site summary" });
 

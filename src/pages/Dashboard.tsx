@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { capitalize } from "@/lib/text";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -663,11 +664,11 @@ const Dashboard = () => {
                                   onClick={() => generateReceipt({
                                     type: "donation",
                                     id: donation.id,
-                                    name: `${donation.tier.charAt(0).toUpperCase() + donation.tier.slice(1)} Donation`,
+                                    name: `${capitalize(donation.tier)} Donation`,
                                     date: formatDate(donation.created_at),
                                     amount: donation.amount,
                                     details: {
-                                      "Tier": donation.tier.charAt(0).toUpperCase() + donation.tier.slice(1),
+                                      "Tier": capitalize(donation.tier),
                                       "Transaction ID": donation.transaction_id || "—",
                                       "Payment Method": donation.payment_method || "—",
                                       "Date": formatDate(donation.created_at),

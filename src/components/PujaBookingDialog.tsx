@@ -27,10 +27,11 @@ import { Loader2, CalendarIcon, Clock, User, Sparkles } from "lucide-react";
 interface Puja {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  duration_minutes: number;
-  category: string;
+  durationMinutes?: number;
+  duration_minutes?: number;
+  category?: string;
 }
 
 interface PujaBookingDialogProps {
@@ -222,7 +223,7 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="font-medium">{puja.duration_minutes} minutes</p>
+                <p className="font-medium">{puja.durationMinutes ?? puja.duration_minutes ?? 60} minutes</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Amount</p>

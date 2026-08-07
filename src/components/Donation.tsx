@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Heart, Wallet, CreditCard, Smartphone, Loader2, Pencil } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Heart, Wallet, CreditCard, Smartphone, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,11 +24,11 @@ declare global {
   }
 }
 
-const paymentMethods = [
-  { name: "UPI", icon: Smartphone },
-  { name: "Card", icon: CreditCard },
-  { name: "Wallet", icon: Wallet },
-];
+const paymentMethodIcons: Record<string, typeof Smartphone> = {
+  UPI: Smartphone,
+  Card: CreditCard,
+  Wallet: Wallet,
+};
 
 const Donation = () => {
   const { user } = useAuth();
@@ -40,24 +40,47 @@ const Donation = () => {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const { t } = useLanguage();
 
+  const location = useLocation();
+  const [routeDonationAmount, setRouteDonationAmount] = useState<number | null>(null);
+
   useEffect(() => {
     const loadSettings = async () => {
       setSettingsLoading(true);
       try {
         const loaded = await fetchDonationSettings();
         setSettings(loaded);
-        setDonationAmount(String(loaded.default_amount));
+        setDonationAmount(String(routeDonationAmount ?? loaded.default_amount));
         setCustomAmountMode(false);
       } catch (error) {
         console.error("Failed to load donation settings", error);
         setSettings(DEFAULT_DONATION_SETTINGS);
+        setDonationAmount(String(routeDonationAmount ?? DEFAULT_DONATION_SETTINGS.default_amount));
+        setCustomAmountMode(false);
       } finally {
         setSettingsLoading(false);
       }
     };
 
     loadSettings();
-  }, []);
+  }, [routeDonationAmount]);
+
+  // Read optional `amount` query parameter to prefill donation amount (e.g. /donate?amount=2100)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(location.search || "");
+      const amountParam = params.get("amount");
+      if (amountParam && /^\d+$/.test(amountParam)) {
+        const amountValue = Number(amountParam);
+        setRouteDonationAmount(amountValue);
+        setDonationAmount(String(amountValue));
+        setCustomAmountMode(false);
+      } else {
+        setRouteDonationAmount(null);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [location.search]);
 
   const parsedDonationAmount = useMemo(() => Number(donationAmount || settings.default_amount), [donationAmount, settings.default_amount]);
   const donationValidationError = useMemo(
@@ -233,12 +256,37 @@ const Donation = () => {
         </div>
 
         <div className="max-w-2xl mx-auto mb-10 md:mb-12">
-          <Card className="border-primary/20 shadow-lg">
+          <Card className="border-primary/20 shadow-lg overflow-hidden">
+            {settings.hero_image_url ? (
+              <div className="h-40 md:h-56 overflow-hidden bg-muted">
+                <img src={settings.hero_image_url} alt={settings.card_title} className="h-full w-full object-cover" />
+              </div>
+            ) : null}
             <CardHeader className="pb-4">
-              <CardTitle className="font-heading text-2xl text-primary">Make a Custom Donation</CardTitle>
-              <p className="text-sm text-muted-foreground">Choose an amount below or enter your own. Payments still go through the same secure Razorpay flow.</p>
+              <CardTitle className="font-heading text-2xl text-primary">{settings.card_title}</CardTitle>
+              <p className="text-sm text-muted-foreground">{settings.card_subtitle}</p>
             </CardHeader>
             <CardContent className="space-y-5">
+              {settings.proof_video_url ? (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                  <p className="text-sm font-medium text-primary">Proof Video</p>
+                  {/(?:youtube\.com\/watch\?v=|youtu\.be\/)/i.test(settings.proof_video_url) ? (
+                    <div className="overflow-hidden rounded-lg aspect-video">
+                      <iframe
+                        src={settings.proof_video_url.includes("youtube.com/watch?v=")
+                          ? settings.proof_video_url.replace("watch?v=", "embed/")
+                          : settings.proof_video_url.replace("youtu.be/", "www.youtube.com/embed/")}
+                        title="Donation proof video"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="h-full w-full"
+                      />
+                    </div>
+                  ) : (
+                    <video controls className="w-full rounded-lg border border-muted" src={settings.proof_video_url} />
+                  )}
+                </div>
+              ) : null}
               {!settingsLoading && settings.enable_suggested_amounts && settings.suggested_amounts.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {settings.suggested_amounts.map((amount) => (
@@ -300,7 +348,7 @@ const Donation = () => {
                     ) : (
                       <>
                         <Heart className="mr-2 h-4 w-4" />
-                        {t("common.donateNow")}
+                        {settings.card_cta_text}
                       </>
                     )}
                   </Button>
@@ -310,29 +358,35 @@ const Donation = () => {
           </Card>
         </div>
 
-        {/* QR Code Section */}
-        <div className="max-w-sm mx-auto mb-10 md:mb-12">
-          <DonationQRCode />
-        </div>
-
-        {/* Payment Methods */}
-        <div className="text-center">
-          <p className="text-muted-foreground text-sm mb-3 md:mb-4">{t("donation.acceptedPayments")}</p>
-          <div className="flex items-center justify-center gap-3 md:gap-4">
-            {paymentMethods.filter((method) => settings.enable_quick_upi || method.name !== "UPI").map((method) => (
-              <div
-                key={method.name}
-                className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg bg-muted"
-              >
-                <method.icon className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                <span className="text-xs md:text-sm font-medium">{method.name}</span>
-              </div>
-            ))}
+        {settings.show_qr_code && (
+          <div className="max-w-sm mx-auto mb-10 md:mb-12">
+            <DonationQRCode />
           </div>
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-3 md:mt-4">
-            {t("donation.taxNote")}
-          </p>
-        </div>
+        )}
+
+        {settings.show_payment_methods && (
+          <div className="text-center">
+            <p className="text-muted-foreground text-sm mb-3 md:mb-4">{t("donation.acceptedPayments")}</p>
+
+            <div className="flex items-center justify-center flex-wrap gap-3 md:gap-4">
+              {settings.payment_methods.filter((method) => settings.enable_quick_upi || method !== "UPI").map((method) => {
+                const Icon = paymentMethodIcons[method] || Wallet;
+                return (
+                  <div
+                    key={method}
+                    className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg bg-muted"
+                  >
+                    <Icon className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                    <span className="text-xs md:text-sm font-medium">{method}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-3 md:mt-4">
+              {t("donation.taxNote")}
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

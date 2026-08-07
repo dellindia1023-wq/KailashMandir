@@ -13,11 +13,21 @@ interface Puja {
   name: string;
   description: string | null;
   price: number;
-  duration_minutes: number | null;
-  category: string | null;
-  image_url: string | null;
-  is_active: boolean | null;
-  created_at: string;
+  duration_minutes?: number | null;
+  durationMinutes?: number | null;
+  category?: string | null;
+  category_id?: string | null;
+  is_active?: boolean | null;
+  active?: boolean | null;
+  featured?: boolean | null;
+  sort_order?: number | null;
+  created_at?: string;
+  puja_categories?: { id: string; name: string; slug: string } | null;
+  puja_details?: Array<Record<string, any>> | Record<string, any> | null;
+  puja_booking_settings?: Array<Record<string, any>> | Record<string, any> | null;
+  puja_seo?: Array<Record<string, any>> | Record<string, any> | null;
+  puja_media?: Array<Record<string, any>> | null;
+  puja_benefits?: Array<{ benefit?: string | null }> | null;
 }
 
 export const AdminPujasTable = () => {
@@ -32,15 +42,17 @@ export const AdminPujasTable = () => {
   const fetchPujas = async () => {
     setLoading(true);
     try {
+      // Avoid selecting related tables with PostgREST foreign joins —
+      // if the DB hasn't been migrated to the normalized CMS tables this will fail.
       const { data, error } = await supabase
         .from("pujas")
         .select("*")
         .order("name");
-
       if (error) throw error;
       setPujas(data || []);
     } catch (error) {
       console.error("Error fetching pujas:", error);
+      toast.error("Failed to load pujas. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -50,9 +62,29 @@ export const AdminPujasTable = () => {
     fetchPujas();
   }, []);
 
-  const handleEdit = (puja: Puja) => {
-    setSelectedPuja(puja);
-    setDialogOpen(true);
+  const handleEdit = async (puja: Puja) => {
+    try {
+      setLoading(true);
+      // Fetch single puja record only from the base table. Detailed related
+      // data may not be present on all environments; AdminPujaDialog will
+      // handle loading/upserting related rows and fall back if needed.
+      const { data, error } = await supabase
+        .from("pujas")
+        .select("*")
+        .eq("id", puja.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error loading puja details:", error);
+        toast.error("Failed to load puja details. Please try again.");
+        setSelectedPuja(puja);
+      } else {
+        setSelectedPuja(data || puja);
+      }
+    } finally {
+      setLoading(false);
+      setDialogOpen(true);
+    }
   };
 
   const handleAddNew = () => {
@@ -68,7 +100,7 @@ export const AdminPujasTable = () => {
       const { error } = await supabase.from("pujas").delete().eq("id", pujaToDelete.id);
       if (error) throw error;
       toast.success("Puja deleted successfully");
-      fetchPujas();
+      void fetchPujas();
     } catch (error: any) {
       console.error("Error deleting puja:", error);
       toast.error(error.message || "Failed to delete puja");
@@ -79,7 +111,7 @@ export const AdminPujasTable = () => {
     }
   };
 
-  const getCategoryLabel = (category: string | null) => {
+  const getCategoryLabel = (category?: string | null) => {
     const labels: Record<string, string> = {
       abhishekam: "Abhishekam",
       jaap: "Jaap & Mantra",
@@ -89,6 +121,14 @@ export const AdminPujasTable = () => {
       sponsorship: "Sponsorship",
     };
     return category ? labels[category] || category : "—";
+  };
+
+  const getPrice = (puja: Puja) => {
+    if (Array.isArray(puja.puja_booking_settings) && puja.puja_booking_settings.length > 0) {
+      const price = puja.puja_booking_settings[0]?.price;
+      if (typeof price === "number") return price;
+    }
+    return puja.price || 0;
   };
 
   if (loading) {
@@ -146,13 +186,15 @@ export const AdminPujasTable = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{getCategoryLabel(puja.category)}</Badge>
+                    <Badge variant="secondary">
+                      {puja.puja_categories?.name || getCategoryLabel(puja.category)}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="font-medium">₹{puja.price.toLocaleString("en-IN")}</TableCell>
-                  <TableCell>{puja.duration_minutes ? `${puja.duration_minutes} mins` : "—"}</TableCell>
+                  <TableCell className="font-medium">₹{getPrice(puja).toLocaleString("en-IN")}</TableCell>
+                  <TableCell>{puja.duration_minutes ?? puja.durationMinutes ? `${puja.duration_minutes ?? puja.durationMinutes} mins` : "—"}</TableCell>
                   <TableCell>
-                    <Badge variant={puja.is_active ? "default" : "outline"}>
-                      {puja.is_active ? "Active" : "Inactive"}
+                    <Badge variant={(puja.is_active ?? puja.active) ? "default" : "outline"}>
+                      {(puja.is_active ?? puja.active) ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">

@@ -11,36 +11,43 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, Wifi, WifiOff, Save, Loader2, Youtube, Upload, Radio, Camera } from "lucide-react";
+import { Video, Wifi, WifiOff, Save, Loader2, Youtube, Upload, Radio, Camera, CalendarClock, Server, ShieldCheck, HardDriveUpload, AlertCircle, CheckCircle2, PlayCircle, StopCircle } from "lucide-react";
 import DonationSettingsPanel from "@/components/admin/DonationSettingsPanel";
+import { DarshanScheduleSlot, DarshanWindowStatus, formatScheduleTime, getDarshanWindowStatus } from "@/lib/liveDarshanSchedule";
+import { buildLiveStreamEndpoints, fetchLiveStreamSettings, saveLiveStreamSettings, normalizeLiveStreamSettings, validateHlsStream } from "@/lib/liveStreamSettings";
 
-type StreamType = "hls" | "youtube" | "upload" | "mobile";
+type StreamType = "youtube" | "mobile" | "rtsp";
+
+type BackendStreamType = "hls" | "youtube" | "upload" | "mobile" | "rtmp" | "rtsp" | "webrtc";
 
 const STREAM_TYPE_LABELS: Record<StreamType, { label: string; icon: React.ReactNode; desc: string; placeholder: string }> = {
-  hls: {
-    label: "HLS / CCTV Stream",
-    icon: <Radio className="h-4 w-4" />,
-    desc: "Enter the HLS (.m3u8) URL from your CCTV/NVR/media server.",
-    placeholder: "https://your-server.com/live/temple.m3u8",
-  },
   youtube: {
     label: "YouTube Live",
     icon: <Youtube className="h-4 w-4" />,
     desc: "Paste a YouTube Live or regular video URL. Supports youtube.com/live/..., youtube.com/watch?v=..., and youtu.be/... formats.",
     placeholder: "https://www.youtube.com/live/abcdefghijk",
   },
-  upload: {
-    label: "Uploaded Video URL",
-    icon: <Upload className="h-4 w-4" />,
-    desc: "Paste a direct video file URL (.mp4, .webm). Useful for pre-recorded darshan playback when stream is unavailable.",
-    placeholder: "https://storage.example.com/darshan-replay.mp4",
-  },
   mobile: {
     label: "Mobile Camera",
     icon: <Camera className="h-4 w-4" />,
-    desc: "Grant camera permission on your phone to preview the live darshan feed locally.",
+    desc: "Grant camera permission on your phone to preview the live darshan feed locally and publish through MediaMTX.",
     placeholder: "Mobile camera stream preview",
   },
+  rtsp: {
+    label: "CCTV / RTSP Camera",
+    icon: <Video className="h-4 w-4" />,
+    desc: "Use your CCTV/NVR RTSP endpoint. The server will expose it for browser playback through MediaMTX.",
+    placeholder: "rtsp://camera.local:8554/live",
+  },
+};
+
+const normalizeAdminStreamType = (value?: string | null): StreamType => {
+  const normalized = (value || "rtsp").trim().toLowerCase();
+  if (normalized === "youtube" || normalized === "mobile" || normalized === "rtsp") {
+    return normalized as StreamType;
+  }
+
+  return "rtsp";
 };
 
 const AdminSettings = () => {
@@ -48,68 +55,130 @@ const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [streamUrl, setStreamUrl] = useState("");
-  const [streamType, setStreamType] = useState<StreamType>("hls");
+  const [streamType, setStreamType] = useState<StreamType>("rtsp");
   const [isLive, setIsLive] = useState(false);
   const [title, setTitle] = useState("Live Darshan");
   const [description, setDescription] = useState("");
   const [viewerCount, setViewerCount] = useState(0);
+  const [sourceName, setSourceName] = useState("Primary Camera");
+  const [backupStreamUrl, setBackupStreamUrl] = useState("");
+  const [sourceNotes, setSourceNotes] = useState("");
+  const [manualOverride, setManualOverride] = useState(false);
+  const [manualLive, setManualLive] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraPermission, setCameraPermission] = useState<PermissionState>("prompt");
   const [cameraLoading, setCameraLoading] = useState(false);
+  const [mobilePublishStatus, setMobilePublishStatus] = useState<"idle" | "publishing" | "published" | "error">("idle");
+  const [mobilePublishError, setMobilePublishError] = useState<string | null>(null);
+  const [mediaServerUrl, setMediaServerUrl] = useState("");
+  const [mediaServerPath, setMediaServerPath] = useState("live");
+  const [rtmpUrl, setRtmpUrl] = useState("");
+  const [rtmpStreamKey, setRtmpStreamKey] = useState("");
+  const [cameraUsername, setCameraUsername] = useState("");
+  const [cameraPassword, setCameraPassword] = useState("");
+  const [autoFailover, setAutoFailover] = useState(false);
+  const [recordingEnabled, setRecordingEnabled] = useState(false);
+  const [isPrimary, setIsPrimary] = useState(true);
+  const [priority, setPriority] = useState(1);
+  const [streamStatus, setStreamStatus] = useState("offline");
+  const [healthSummary, setHealthSummary] = useState("");
+  const [scheduleSlots, setScheduleSlots] = useState<DarshanScheduleSlot[]>([]);
+  const [scheduleStatus, setScheduleStatus] = useState<DarshanWindowStatus | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const mobilePublishStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
-      const { data, error } = await supabase
-        .from("live_stream_settings")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await fetchLiveStreamSettings();
 
       if (error) {
         toast.error("Failed to load live stream settings");
       }
 
       const settings = data ?? null;
+      const normalizedSettings = normalizeLiveStreamSettings(settings as any);
       if (settings) {
-        setSettingsId(settings.id);
-        setStreamUrl(settings.stream_url);
-        setStreamType(((settings as any).stream_type as StreamType) || "hls");
-        setIsLive(settings.is_live);
-        setTitle(settings.title);
-        setDescription(settings.description || "");
-        setViewerCount(settings.viewer_count);
+        setSettingsId((settings as any).id || null);
+        setStreamUrl(normalizedSettings.streamUrl);
+        setStreamType(normalizeAdminStreamType(normalizedSettings.streamType));
+        setIsLive(normalizedSettings.isLive);
+        setTitle(normalizedSettings.title);
+        setDescription(normalizedSettings.description);
+        setViewerCount(normalizedSettings.viewerCount);
+        setSourceName(normalizedSettings.sourceName);
+        setBackupStreamUrl(normalizedSettings.backupStreamUrl);
+        setSourceNotes(normalizedSettings.sourceNotes);
+        setManualOverride(normalizedSettings.manualOverride);
+        setManualLive(normalizedSettings.manualLive);
+        setMediaServerUrl(normalizedSettings.mediaServerUrl);
+        setMediaServerPath(normalizedSettings.mediaServerPath || "live");
+        setRtmpUrl(normalizedSettings.rtmpUrl);
+        setRtmpStreamKey(normalizedSettings.rtmpStreamKey);
+        setCameraUsername(normalizedSettings.cameraUsername);
+        setCameraPassword(normalizedSettings.cameraPassword);
+        setAutoFailover(normalizedSettings.autoFailover);
+        setRecordingEnabled(normalizedSettings.recordingEnabled);
+        setIsPrimary(normalizedSettings.isPrimary);
+        setPriority(normalizedSettings.priority || 1);
+        setStreamStatus(normalizedSettings.streamStatus || "offline");
+        setHealthSummary(normalizedSettings.healthSummary || "");
       } else {
-        const { data: inserted, error: insertError } = await supabase
-          .from("live_stream_settings")
-          .insert({
-            stream_url: "",
-            stream_type: "hls",
-            is_live: false,
-            title: "Live Darshan",
-            description: "",
-            viewer_count: 0,
-            updated_at: new Date().toISOString(),
-          })
-          .select()
-          .maybeSingle();
+        const { data: inserted, error: insertError } = await saveLiveStreamSettings({
+          stream_url: "",
+          stream_type: "rtsp",
+          is_live: false,
+          title: "Live Darshan",
+          description: "",
+          viewer_count: 0,
+          source_name: "Primary Camera",
+          backup_stream_url: "",
+          source_notes: "",
+          manual_override: false,
+          manual_live: false,
+        });
 
         if (insertError || !inserted) {
           toast.error("Unable to initialize live stream settings");
         } else {
-          setSettingsId(inserted.id);
-          setStreamUrl(inserted.stream_url);
-          setStreamType(((inserted as any).stream_type as StreamType) || "hls");
-          setIsLive(inserted.is_live);
-          setTitle(inserted.title);
+          setSettingsId((inserted as any).id || null);
+          setStreamUrl(inserted.stream_url || "");
+          setStreamType(((inserted as any).stream_type as StreamType) || "rtsp");
+          setIsLive(inserted.is_live || false);
+          setTitle(inserted.title || "Live Darshan");
           setDescription(inserted.description || "");
-          setViewerCount(inserted.viewer_count);
+          setViewerCount(inserted.viewer_count || 0);
+          setSourceName((inserted as any).source_name || "Primary Camera");
+          setBackupStreamUrl((inserted as any).backup_stream_url || "");
+          setSourceNotes((inserted as any).source_notes || "");
+          setManualOverride(Boolean((inserted as any).manual_override));
+          setManualLive(Boolean((inserted as any).manual_live));
         }
       }
 
       setLoading(false);
     };
+
+    const fetchScheduleState = async () => {
+      const { data, error } = await supabase
+        .from("darshan_schedule")
+        .select("day_of_week, start_time, end_time, is_active, label")
+        .eq("is_active", true)
+        .order("day_of_week", { ascending: true })
+        .order("start_time", { ascending: true });
+
+      if (!error) {
+        const slots = (data || []) as DarshanScheduleSlot[];
+        setScheduleSlots(slots);
+        setScheduleStatus(getDarshanWindowStatus(new Date(), slots));
+      }
+    };
+
     fetch();
+    fetchScheduleState();
+    const intervalId = window.setInterval(fetchScheduleState, 60_000);
+
+    return () => window.clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -123,76 +192,90 @@ const AdminSettings = () => {
       if (cameraStream) {
         cameraStream.getTracks().forEach((track) => track.stop());
       }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+      }
     };
   }, [cameraStream]);
 
   const handleSave = async () => {
     setSaving(true);
 
-    if (!settingsId) {
-      const { data: inserted, error } = await supabase
-        .from("live_stream_settings")
-        .insert({
-          stream_url: streamUrl,
-          stream_type: streamType,
-          is_live: isLive,
-          title,
-          description,
-          viewer_count: viewerCount,
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .maybeSingle();
+    const endpoints = buildLiveStreamEndpoints({
+      mediaServerUrl,
+      mediaServerPath,
+      rtmpUrl,
+      rtmpStreamKey,
+    });
+    const nextStreamUrl = streamType === "youtube" ? streamUrl : endpoints.hlsUrl || streamUrl;
+    const diagnostics = validateHlsStream(nextStreamUrl);
+    const nextStreamStatus = diagnostics.isValid ? "ready" : "degraded";
+    const nextHealthSummary = diagnostics.summary;
 
-      if (error || !inserted) {
-        toast.error("Failed to save settings: " + (error?.message || "Unable to insert settings"));
-      } else {
-        setSettingsId(inserted.id);
-        toast.success("Live stream settings created!");
-      }
+    const payload = {
+      stream_url: nextStreamUrl,
+      stream_type: streamType,
+      is_live: isLive,
+      title,
+      description,
+      viewer_count: viewerCount,
+      source_name: sourceName,
+      backup_stream_url: backupStreamUrl,
+      source_notes: sourceNotes,
+      manual_override: manualOverride,
+      manual_live: manualLive,
+      media_server_url: mediaServerUrl,
+      media_server_path: mediaServerPath,
+      rtmp_url: rtmpUrl,
+      rtmp_stream_key: rtmpStreamKey,
+      camera_username: cameraUsername,
+      camera_password: cameraPassword,
+      auto_failover: autoFailover,
+      recording_enabled: recordingEnabled,
+      is_primary: isPrimary,
+      priority,
+      stream_status: nextStreamStatus,
+      health_summary: nextHealthSummary,
+    };
 
-      setSaving(false);
-      return;
-    }
+    const { data: saved, error } = await saveLiveStreamSettings(payload, settingsId || undefined);
 
-    const { error } = await supabase
-      .from("live_stream_settings")
-      .update({
-        stream_url: streamUrl,
-        stream_type: streamType,
-        is_live: isLive,
-        title,
-        description,
-        viewer_count: viewerCount,
-        updated_at: new Date().toISOString(),
-      } as any)
-      .eq("id", settingsId);
-
-    if (error) {
-      toast.error("Failed to save settings: " + error.message);
+    if (error || !saved) {
+      toast.error("Failed to save settings: " + (error?.message || "Unable to save settings"));
     } else {
-      toast.success("Live stream settings updated!");
+      setSettingsId((saved as any).id || settingsId);
+      setStreamStatus(nextStreamStatus);
+      setHealthSummary(nextHealthSummary);
+      const message = settingsId ? "Live stream settings updated!" : "Live stream settings created!";
+      toast.success(message);
     }
+
     setSaving(false);
   };
 
   const handleToggleLive = async (checked: boolean) => {
+    const nextManualOverride = true;
+    const nextManualLive = checked;
     setIsLive(checked);
+    setManualOverride(nextManualOverride);
+    setManualLive(nextManualLive);
 
     if (!settingsId) {
-      const { data: inserted, error } = await supabase
-        .from("live_stream_settings")
-        .insert({
+      const { data: inserted, error } = await saveLiveStreamSettings(
+        {
           stream_url: streamUrl,
           stream_type: streamType,
           is_live: checked,
           title,
           description,
           viewer_count: viewerCount,
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .maybeSingle();
+          source_name: sourceName,
+          backup_stream_url: backupStreamUrl,
+          source_notes: sourceNotes,
+          manual_override: nextManualOverride,
+          manual_live: nextManualLive,
+        }
+      );
 
       if (error || !inserted) {
         toast.error("Failed to toggle live status");
@@ -200,15 +283,19 @@ const AdminSettings = () => {
         return;
       }
 
-      setSettingsId(inserted.id);
+      setSettingsId((inserted as any).id || null);
       toast.success(checked ? "Stream is now LIVE! 🔴" : "Stream set to offline");
       return;
     }
 
-    const { error } = await supabase
-      .from("live_stream_settings")
-      .update({ is_live: checked, updated_at: new Date().toISOString() })
-      .eq("id", settingsId);
+    const { error } = await saveLiveStreamSettings(
+      {
+        is_live: checked,
+        manual_override: nextManualOverride,
+        manual_live: nextManualLive,
+      },
+      settingsId,
+    );
     if (error) {
       toast.error("Failed to toggle live status");
       setIsLive(!checked);
@@ -219,17 +306,63 @@ const AdminSettings = () => {
 
   const requestCameraPermission = async () => {
     setCameraLoading(true);
+    setMobilePublishError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("This browser does not support camera publishing.");
+      }
+
+      const endpoints = buildLiveStreamEndpoints({
+        mediaServerUrl,
+        mediaServerPath,
+        rtmpUrl,
+        rtmpStreamKey,
+      });
+      if (!endpoints.whipPublishUrl) {
+        throw new Error("Set a MediaMTX server URL and path before starting the mobile publish.");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      peerConnectionRef.current = pc;
+      mobilePublishStreamRef.current = stream;
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const response = await fetch(endpoints.whipPublishUrl, {
+        method: "POST",
+        body: offer.sdp,
+        headers: {
+          "Content-Type": "application/sdp",
+          Accept: "application/sdp",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`WHIP publish failed with status ${response.status}`);
+      }
+
+      const answerSdp = await response.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+
       setCameraStream(stream);
       setCameraPermission("granted");
-      toast.success("Camera permission granted. Preview is active.");
+      setMobilePublishStatus("published");
+      setStreamStatus("publishing");
+      setHealthSummary(`Publishing to ${endpoints.whipPublishUrl}`);
+      toast.success("Mobile camera is now publishing to your MediaMTX server.");
     } catch (error: any) {
       if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
         setCameraPermission("denied");
+        setMobilePublishStatus("error");
+        setMobilePublishError("Camera permission denied. Please allow access to use mobile camera.");
         toast.error("Camera permission denied. Please allow access to use mobile camera.");
       } else {
-        toast.error("Unable to access camera: " + (error?.message || error));
+        setMobilePublishStatus("error");
+        setMobilePublishError(error?.message || "Unable to publish the mobile camera stream.");
+        toast.error(error?.message || "Unable to publish the mobile camera stream.");
       }
       setCameraStream(null);
     } finally {
@@ -238,10 +371,21 @@ const AdminSettings = () => {
   };
 
   const stopCameraPreview = () => {
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    if (mobilePublishStreamRef.current) {
+      mobilePublishStreamRef.current.getTracks().forEach((track) => track.stop());
+      mobilePublishStreamRef.current = null;
+    }
     if (cameraStream) {
       cameraStream.getTracks().forEach((track) => track.stop());
       setCameraStream(null);
     }
+    setMobilePublishStatus("idle");
+    setStreamStatus("offline");
+    setHealthSummary("Mobile camera publish stopped.");
   };
 
   if (loading) {
@@ -384,6 +528,139 @@ const AdminSettings = () => {
             />
           </div>
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="source-name">Primary source name</Label>
+              <Input
+                id="source-name"
+                placeholder="Primary Camera"
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Label the main camera or feed so staff can distinguish channels.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="backup-url">Backup stream URL</Label>
+              <Input
+                id="backup-url"
+                placeholder="https://example.com/backup.m3u8"
+                value={backupStreamUrl}
+                onChange={(e) => setBackupStreamUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Optional fallback source for a second camera or replay stream.</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="source-notes">Source notes</Label>
+            <Textarea
+              id="source-notes"
+              placeholder="Use this feed during the morning darshan window."
+              value={sourceNotes}
+              onChange={(e) => setSourceNotes(e.target.value)}
+              rows={2}
+            />
+            <p className="text-xs text-muted-foreground">Leave reminders for priests or admins about how to manage this source.</p>
+          </div>
+
+          <Card className="border-gold/30 bg-background/80">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2"><Server className="h-4 w-4" /> MediaMTX / RTMP / RTSP Configuration</CardTitle>
+              <CardDescription>Configure the production streaming server and security settings without editing code.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="media-server-url">MediaMTX server URL</Label>
+                  <Input id="media-server-url" value={mediaServerUrl} onChange={(e) => setMediaServerUrl(e.target.value)} placeholder="https://media.example.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="media-server-path">MediaMTX path</Label>
+                  <Input id="media-server-path" value={mediaServerPath} onChange={(e) => setMediaServerPath(e.target.value)} placeholder="live" />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="rtmp-url">RTMP publish URL</Label>
+                  <Input id="rtmp-url" value={rtmpUrl} onChange={(e) => setRtmpUrl(e.target.value)} placeholder="rtmp://media.example.com/live" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rtmp-stream-key">RTMP stream key</Label>
+                  <Input id="rtmp-stream-key" value={rtmpStreamKey} onChange={(e) => setRtmpStreamKey(e.target.value)} placeholder="temple-stream-key" />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="camera-username">Camera username</Label>
+                  <Input id="camera-username" value={cameraUsername} onChange={(e) => setCameraUsername(e.target.value)} placeholder="admin" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="camera-password">Camera password</Label>
+                  <Input id="camera-password" value={cameraPassword} onChange={(e) => setCameraPassword(e.target.value)} placeholder="••••••••" type="password" />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3">
+                  <div>
+                    <Label className="text-sm">Auto failover</Label>
+                    <p className="text-xs text-muted-foreground">Switch to the backup source automatically.</p>
+                  </div>
+                  <Switch checked={autoFailover} onCheckedChange={setAutoFailover} />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3">
+                  <div>
+                    <Label className="text-sm">Recording enabled</Label>
+                    <p className="text-xs text-muted-foreground">Enable archival recordings when the stream is live.</p>
+                  </div>
+                  <Switch checked={recordingEnabled} onCheckedChange={setRecordingEnabled} />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3">
+                  <div>
+                    <Label className="text-sm">Primary source</Label>
+                    <p className="text-xs text-muted-foreground">Mark this channel as the default stream.</p>
+                  </div>
+                  <Switch checked={isPrimary} onCheckedChange={setIsPrimary} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="priority">Priority</Label>
+                  <Input id="priority" type="number" min={1} max={10} value={priority} onChange={(e) => setPriority(Number(e.target.value) || 1)} />
+                </div>
+              </div>
+              <div className="rounded-lg border border-gold/20 bg-gold/10 p-3 text-sm text-foreground">
+                <div className="flex items-center gap-2 font-semibold"><AlertCircle className="h-4 w-4" /> Stream diagnostics</div>
+                <p className="mt-2 text-muted-foreground">{healthSummary || "Save the configuration to evaluate the stream health and browser compatibility."}</p>
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  {streamStatus === "ready" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : streamStatus === "publishing" ? <PlayCircle className="h-4 w-4 text-gold" /> : <StopCircle className="h-4 w-4 text-muted-foreground" />}
+                  <span className="uppercase">{streamStatus}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-4">
+            <div>
+              <Label className="text-base font-semibold">Manual override</Label>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Keep the stream state fixed until you change it again. Disable this to let the schedule take control.
+              </p>
+            </div>
+            <Switch
+              checked={manualOverride}
+              onCheckedChange={(checked) => {
+                setManualOverride(checked);
+                if (checked) {
+                  setManualLive(true);
+                  setIsLive(true);
+                } else {
+                  setManualLive(false);
+                }
+              }}
+            />
+          </div>
+
           {/* Viewer Count */}
           <div className="space-y-2">
             <Label htmlFor="viewer-count">Viewer Count (display)</Label>
@@ -406,6 +683,48 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading flex items-center gap-2">
+            <CalendarClock className="h-5 w-5 text-primary" />
+            Current Darshan Window
+          </CardTitle>
+          <CardDescription>
+            A quick view of the active schedule so the live stream can be aligned with temple timings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 p-4">
+            <div>
+              <p className="text-sm font-semibold">{scheduleStatus?.isInSchedule ? "Live window is active" : "Live window is not active"}</p>
+              <p className="text-sm text-muted-foreground">
+                {scheduleStatus?.currentSlot
+                  ? `${scheduleStatus.currentSlot.label || "Current slot"}: ${formatScheduleTime(scheduleStatus.currentSlot.start_time)}–${formatScheduleTime(scheduleStatus.currentSlot.end_time)}`
+                  : scheduleStatus?.nextSlot
+                    ? `Next slot: ${scheduleStatus.nextSlot.label || "Darshan"} at ${formatScheduleTime(scheduleStatus.nextSlot.start_time)}`
+                    : "No active slots are currently configured."}
+              </p>
+            </div>
+            <Badge variant={scheduleStatus?.isInSchedule ? "destructive" : "secondary"}>
+              {scheduleStatus?.isInSchedule ? "Open now" : "Offline window"}
+            </Badge>
+          </div>
+          {scheduleSlots.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Upcoming slots today</p>
+              <ul className="mt-2 space-y-1">
+                {scheduleSlots.slice(0, 3).map((slot) => (
+                  <li key={`${slot.start_time}-${slot.end_time}`} className="flex items-center justify-between rounded-md border bg-background/70 px-3 py-2">
+                    <span>{slot.label || "Darshan"}</span>
+                    <span className="font-mono text-xs">{formatScheduleTime(slot.start_time)}–{formatScheduleTime(slot.end_time)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <DonationSettingsPanel />
 
       <DarshanScheduleManager />
@@ -417,11 +736,11 @@ const AdminSettings = () => {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-4">
           <div>
-            <p className="font-semibold text-foreground mb-1 flex items-center gap-2"><Radio className="h-4 w-4" /> Option 1: CCTV / HLS Stream</p>
+            <p className="font-semibold text-foreground mb-1 flex items-center gap-2"><Radio className="h-4 w-4" /> Option 1: CCTV / RTSP Camera</p>
             <ol className="list-decimal list-inside space-y-1 pl-2">
-              <li>Configure your CCTV camera or NVR to output an RTSP stream.</li>
-              <li>Use a media server (MediaMTX, Nginx-RTMP, or NVR built-in) to convert RTSP → HLS.</li>
-              <li>Paste the <code>.m3u8</code> URL above and toggle "Go Live".</li>
+              <li>Configure your CCTV camera or NVR to expose an RTSP endpoint.</li>
+              <li>Point the MediaMTX server at that camera feed so it can publish HLS for the public player.</li>
+              <li>Select "CCTV / RTSP Camera" and paste the RTSP URL, then toggle "Go Live".</li>
             </ol>
           </div>
           <div>
@@ -433,15 +752,15 @@ const AdminSettings = () => {
             </ol>
           </div>
           <div>
-            <p className="font-semibold text-foreground mb-1 flex items-center gap-2"><Upload className="h-4 w-4" /> Option 3: Uploaded Video</p>
+            <p className="font-semibold text-foreground mb-1 flex items-center gap-2"><Camera className="h-4 w-4" /> Option 3: Mobile Camera</p>
             <ol className="list-decimal list-inside space-y-1 pl-2">
-              <li>Upload a video file (.mp4) to any cloud storage or temple CDN.</li>
-              <li>Paste the direct video URL above.</li>
-              <li>This plays as a loop — useful for pre-recorded darshan replays.</li>
+              <li>Use the phone camera preview and publish flow from the admin panel.</li>
+              <li>Ensure the MediaMTX server URL and path are configured.</li>
+              <li>Select "Mobile Camera" and start the publish session for the temple feed.</li>
             </ol>
           </div>
           <p className="text-xs border-l-2 border-gold pl-3 mt-4">
-            💡 Most modern NVRs (Hikvision, Dahua, etc.) support direct HLS output. YouTube Live is the simplest option for temple staff.
+            💡 These three modes are now the supported production paths: YouTube Live, Mobile Camera, and CCTV/RTSP through MediaMTX.
           </p>
         </CardContent>
       </Card>

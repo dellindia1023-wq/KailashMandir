@@ -1,3 +1,5 @@
+import { capitalize, toTitleCase } from "@/lib/text";
+
 export const SITE_NAME = "Kailash Mahadev Temple Agra";
 export const BASE_URL = "https://kailashmahadev.in";
 export const DEFAULT_OG_IMAGE = `${BASE_URL}/og-image.jpg.webp`;
@@ -50,7 +52,7 @@ export const PRIMARY_BRAND_KEYWORDS = [
 const toTitleCase = (phrase: string) =>
   phrase
     .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => capitalize(word))
     .join(" ");
 
 /** Title-case variants for meta tags and schema alternateName */

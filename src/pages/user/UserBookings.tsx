@@ -14,6 +14,7 @@ import { generateReceipt } from "@/lib/generateReceipt";
 import {
   Calendar, Clock, ArrowRight, Loader2, Mail, CalendarClock, X, Download
 } from "lucide-react";
+import { fetchCompletionForBooking, getCompletionWorkflowSummary, getVisibleCompletionMedia } from "@/lib/pujaCompletion";
 
 interface PujaBooking {
   id: string;
@@ -34,6 +35,7 @@ const UserBookings = () => {
   const [bookings, setBookings] = useState<PujaBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [completionMap, setCompletionMap] = useState<Record<string, { record: any; media: any[] }>>({});
   const [rescheduleBooking, setRescheduleBooking] = useState<PujaBooking | null>(null);
   const [cancelBooking, setCancelBooking] = useState<PujaBooking | null>(null);
   const { sendReminderEmail } = useBookingEmail();
@@ -46,7 +48,21 @@ const UserBookings = () => {
       .select("id, puja_id, devotee_name, devotee_gotra, booking_date, booking_time, amount, payment_status, special_instructions, created_at, pujas (id, name, category)")
       .eq("user_id", user.id)
       .order("booking_date", { ascending: false });
-    setBookings((data as unknown as PujaBooking[]) || []);
+    const bookingsData = (data as unknown as PujaBooking[]) || [];
+    setBookings(bookingsData);
+
+    const completionEntries = await Promise.all(
+      bookingsData.map(async (booking) => {
+        try {
+          const { record, media } = await fetchCompletionForBooking(booking.id);
+          return [booking.id, { record, media }] as const;
+        } catch {
+          return [booking.id, { record: null, media: [] }] as const;
+        }
+      })
+    );
+
+    setCompletionMap(Object.fromEntries(completionEntries));
     setLoading(false);
   }, [user]);
 
@@ -100,6 +116,9 @@ const UserBookings = () => {
       {bookings.map((booking) => {
         const status = getBookingStatus(booking);
         const paymentStatus = getPaymentStatusConfig(booking.payment_status);
+        const completionData = completionMap[booking.id];
+        const completionSummary = getCompletionWorkflowSummary(completionData?.record ?? null, completionData?.media ?? []);
+        const visibleMedia = getVisibleCompletionMedia(completionData?.media ?? []);
         return (
           <Card key={booking.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -118,7 +137,28 @@ const UserBookings = () => {
                       <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{formatDate(booking.booking_date)}</span>
                       <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{formatTime(booking.booking_time)}</span>
                     </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant={completionSummary.badgeVariant as any}>{completionSummary.badgeLabel}</Badge>
+                      <span className="text-xs text-muted-foreground">Completion status</span>
+                    </div>
                     {booking.special_instructions && <p className="text-xs text-muted-foreground italic mt-1">"{booking.special_instructions}"</p>}
+                    {completionData?.record && (
+                      <div className="mt-3 rounded-2xl border border-border/70 bg-muted/40 p-3 text-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant={completionSummary.badgeVariant as any}>{completionSummary.badgeLabel}</Badge>
+                          {completionData.record.prasad_dispatch_status && <span className="text-muted-foreground">Dispatch: {completionData.record.prasad_dispatch_status}</span>}
+                        </div>
+                        {completionData.record.completion_notes && <p className="mt-2 text-sm text-foreground">{completionData.record.completion_notes}</p>}
+                        {completionData.record.courier_tracking_number && <p className="mt-2 text-xs text-muted-foreground">Tracking: {completionData.record.courier_tracking_number}</p>}
+                        {visibleMedia.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {visibleMedia.map((item) => (
+                              <Badge key={item.id} variant="secondary">{item.media_type}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">

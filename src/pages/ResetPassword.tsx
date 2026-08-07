@@ -119,6 +119,12 @@ const ResetPassword = () => {
   if (!isRecovery && !success) {
     return (
       <div className="min-h-screen bg-gradient-divine flex items-center justify-center p-4">
+        <SEOHead
+          title="Reset Password"
+          description="Reset your Kailash Mahadev Temple Agra devotee account password."
+          canonical="/reset-password"
+          noindex
+        />
         <div className="absolute inset-0 temple-pattern opacity-30" />
         <div className="relative z-10 w-full max-w-md">
           <Card className="border-2 border-gold/30 shadow-2xl">
