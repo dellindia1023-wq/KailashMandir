@@ -16,7 +16,7 @@ import { PujaBookingDialog } from "@/components/PujaBookingDialog";
 import CampaignSlot from "@/components/campaigns/CampaignSlot";
 import { useLanguage } from "@/contexts/LanguageContext";
 import aartiImg from "@/assets/gallery/shivling-shringar-1.jpg";
-import { getPujaCategoryLabel, getPujaImage, normalizePujaRecord, type NormalizedPuja } from "@/lib/pujaCms";
+import { getPujaCategoryLabel, getPujaImage, mergePujaCmsRelations, normalizePujaRecord, type NormalizedPuja, type PujaCmsRecord } from "@/lib/pujaCms";
 
 interface Puja extends NormalizedPuja {}
 
@@ -34,33 +34,71 @@ const Pujas = () => {
 
   const fetchPujas = useCallback(async () => {
     try {
-      const selectQuery = "*, puja_media(*), puja_details(*), puja_booking_settings(*), puja_seo(*)";
-      let rows: Array<Record<string, unknown>> = [];
-
       const { data, error } = await (supabase.from("pujas" as any) as any)
-        .select(selectQuery)
-        .eq("is_active", true);
+        .select("*");
 
       if (error) {
-        console.warn("Pujas query with nested relations failed, retrying without nested relations:", error);
-        const { data: fallbackData, error: fallbackError } = await (supabase.from("pujas" as any) as any)
-          .select("*")
-          .eq("is_active", true);
+        console.error("Error fetching pujas:", error);
+        toast.error("Failed to load pujas. Please try again.");
+        return;
+      }
 
-        if (fallbackError) {
-          console.error("Error fetching pujas:", fallbackError);
-          toast.error("Failed to load pujas. Please try again.");
-          return;
-        }
+      const rows = (data || []) as Array<Record<string, unknown>>;
+      const pujaIds = rows.map((row) => row.id).filter(Boolean) as string[];
 
-        rows = (fallbackData || []) as Array<Record<string, unknown>>;
-      } else {
-        rows = (data || []) as Array<Record<string, unknown>>;
+      const relations: Partial<PujaCmsRecord> = {};
+      if (pujaIds.length > 0) {
+        const relationFetches = [
+          { key: "puja_details" as const, table: "puja_details", column: "puja_id" },
+          { key: "puja_booking_settings" as const, table: "puja_booking_settings", column: "puja_id" },
+          { key: "puja_seo" as const, table: "puja_seo", column: "puja_id" },
+          { key: "puja_media" as const, table: "puja_media", column: "puja_id" },
+          { key: "puja_benefits" as const, table: "puja_benefits", column: "puja_id" },
+        ];
+
+        const results = await Promise.allSettled(
+          relationFetches.map(({ table, column }) => (supabase as any).from(table).select("*").in(column, pujaIds))
+        );
+
+        results.forEach((result, index) => {
+          const { key } = relationFetches[index];
+          if (result.status === "fulfilled") {
+            const data = result.value.data as Array<Record<string, unknown>> | null;
+            if (data) {
+              (relations as Record<string, unknown>)[key] = data;
+            }
+          } else {
+            console.warn(`Failed to load ${key}:`, result.reason);
+          }
+        });
       }
 
       const normalized = rows
-        .map((row) => normalizePujaRecord(row as any))
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+        .map((row) => {
+          const baseRow = row as PujaCmsRecord;
+          const relationData = {
+            puja_details: Array.isArray((relations as Record<string, unknown>).puja_details)
+              ? ((relations as Record<string, unknown>).puja_details as Array<Record<string, unknown>>).find((item) => item.puja_id === baseRow.id)
+              : undefined,
+            puja_booking_settings: Array.isArray((relations as Record<string, unknown>).puja_booking_settings)
+              ? ((relations as Record<string, unknown>).puja_booking_settings as Array<Record<string, unknown>>).find((item) => item.puja_id === baseRow.id)
+              : undefined,
+            puja_seo: Array.isArray((relations as Record<string, unknown>).puja_seo)
+              ? ((relations as Record<string, unknown>).puja_seo as Array<Record<string, unknown>>).find((item) => item.puja_id === baseRow.id)
+              : undefined,
+            puja_media: Array.isArray((relations as Record<string, unknown>).puja_media)
+              ? ((relations as Record<string, unknown>).puja_media as Array<Record<string, unknown>>).filter((item) => item.puja_id === baseRow.id)
+              : undefined,
+            puja_benefits: Array.isArray((relations as Record<string, unknown>).puja_benefits)
+              ? ((relations as Record<string, unknown>).puja_benefits as Array<Record<string, unknown>>).filter((item) => item.puja_id === baseRow.id)
+              : undefined,
+          };
+
+          return normalizePujaRecord(mergePujaCmsRelations(baseRow, relationData));
+        })
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+        .filter((puja) => puja.active);
+
       setPujas(normalized);
     } catch (err) {
       console.error("Unexpected error fetching pujas:", err);
@@ -345,25 +383,62 @@ const Pujas = () => {
                           <CardTitle className="font-heading text-lg leading-tight line-clamp-2 text-foreground group-hover:text-primary transition-colors duration-300">
                             {puja.name}
                           </CardTitle>
+                          {puja.subtitle ? (
+                            <p className="text-sm text-muted-foreground mt-2 line-clamp-1">
+                              {puja.subtitle}
+                            </p>
+                          ) : null}
                         </CardHeader>
                         
-                        <CardContent className="pb-6 px-5 space-y-5">
-                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{puja.description}</p>
-                          
-                          <div className="flex items-center justify-between pb-4 border-b border-border/40">
-                            <div className="flex items-center gap-2.5 text-sm bg-primary/10 px-3 py-2 rounded-lg">
-                              <Clock className="h-4 w-4 text-primary" />
-                              <span className="font-semibold text-foreground">{puja.durationMinutes} {t("pujas.mins")}</span>
+                        <CardContent className="pb-6 px-5 space-y-4">
+                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                            {puja.shortDescription || puja.description}
+                          </p>
+                          {puja.benefits.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {puja.benefits.slice(0, 2).map((benefit, index) => (
+                                <Badge key={index} variant="outline" className="text-xs px-2 py-1">
+                                  {benefit}
+                                </Badge>
+                              ))}
                             </div>
+                          ) : null}
+                          <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2 py-1">
+                              <Clock className="h-3.5 w-3.5 text-primary" />
+                              {puja.durationMinutes} {t("pujas.mins")}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2 py-1">
+                              {puja.estimatedCompletion}
+                            </span>
+                            {puja.additionalCharges?.length ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2 py-1">
+                                +{puja.additionalCharges.length} add-on{puja.additionalCharges.length > 1 ? "s" : ""}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="pt-2 border-t border-border/40" />
+                          <div className="flex items-center justify-between">
+                            <div />
                             <div className="text-right">
                               <p className="text-xs text-muted-foreground mb-1">Price</p>
-                              <p className="font-heading font-bold text-2xl text-primary">
-                                ₹{puja.price.toLocaleString("en-IN")}
-                              </p>
+                              {puja.discountPrice < puja.price ? (
+                                <div className="space-y-1">
+                                  <p className="font-heading font-bold text-2xl text-primary">
+                                    ₹{puja.discountPrice.toLocaleString("en-IN")}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground line-through">
+                                    ₹{puja.price.toLocaleString("en-IN")}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="font-heading font-bold text-2xl text-primary">
+                                  ₹{puja.price.toLocaleString("en-IN")}
+                                </p>
+                              )}
                             </div>
                           </div>
-                          
-                          <Button 
+                          <Button
                             className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-primary-foreground font-semibold h-11 rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95 group/btn"
                             onClick={() => {
                               if (!user) {

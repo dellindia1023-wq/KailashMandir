@@ -113,6 +113,7 @@ serve(async (req: Request) => {
       devoteeName,
       devoteeGotra,
       specialInstructions,
+      additionalCharges,
     } = body as any;
 
     // Evidence logging (DO NOT log secrets)
@@ -263,6 +264,13 @@ serve(async (req: Request) => {
       const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
       const safeName = devoteeName.trim().slice(0, 100);
 
+      const safeCharges = Array.isArray(additionalCharges)
+        ? additionalCharges.map((charge: any) => ({
+            label: typeof charge.label === "string" ? charge.label.trim().slice(0, 100) : "",
+            amount: typeof charge.amount === "number" && Number.isFinite(charge.amount) ? charge.amount : 0,
+          }))
+        : null;
+
       const { data: insertedBooking, error: insertError } = await supabase
         .from("puja_bookings")
         .insert({
@@ -279,6 +287,7 @@ serve(async (req: Request) => {
           payment_id: razorpayPaymentId,
           razorpay_order_id: razorpayOrderId,
           razorpay_signature: razorpaySignature,
+          additional_charges: safeCharges,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })

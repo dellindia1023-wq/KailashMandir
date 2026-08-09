@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,7 @@ interface Puja {
   durationMinutes?: number;
   duration_minutes?: number;
   category?: string;
+  additionalCharges?: Array<{ label: string; amount: number }>;
 }
 
 interface PujaBookingDialogProps {
@@ -59,6 +61,7 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
   const [devoteeName, setDevoteeName] = useState("");
   const [devoteeGotra, setDevoteeGotra] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [selectedChargeStates, setSelectedChargeStates] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(false);
 
   const resetForm = () => {
@@ -67,6 +70,7 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
     setDevoteeName("");
     setDevoteeGotra("");
     setSpecialInstructions("");
+    setSelectedChargeStates({});
   };
 
   const loadRazorpayScript = (): Promise<boolean> => {
@@ -105,17 +109,24 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
       }
 
       // Create order
+      const selectedAdditionalCharges = puja.additionalCharges?.map((item, index) => ({
+        ...item,
+        selected: Boolean(selectedChargeStates[index]),
+      }))?.filter((item) => item.selected).map(({ selected, ...charge }) => charge) || [];
+      const finalAmount = puja.price + selectedAdditionalCharges.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
       const { data: orderData, error: orderError } = await supabase.functions.invoke(
         "create-razorpay-order",
         {
           body: {
             pujaId: puja.id,
-            amount: puja.price,
+            amount: finalAmount,
             bookingDate: format(date, "yyyy-MM-dd"),
             bookingTime: time,
             devoteeName,
             devoteeGotra: devoteeGotra || undefined,
             specialInstructions: specialInstructions || undefined,
+            additionalCharges: selectedAdditionalCharges.length > 0 ? selectedAdditionalCharges : undefined,
           },
         }
       );
@@ -135,18 +146,25 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
         handler: async (response: any) => {
           try {
             // Verify payment
+            const selectedAdditionalCharges = puja.additionalCharges?.map((item, index) => ({
+              ...item,
+              selected: Boolean(selectedChargeStates[index]),
+            }))?.filter((item) => item.selected).map(({ selected, ...charge }) => charge) || [];
+            const finalAmount = puja.price + selectedAdditionalCharges.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
               "verify-razorpay-payment",
               {
                 body: {
                   bookingId: orderData.bookingId,
                   pujaId: puja.id,
-                  amount: puja.price,
+                  amount: finalAmount,
                   bookingDate: format(date, "yyyy-MM-dd"),
                   bookingTime: time,
                   devoteeName,
                   devoteeGotra: devoteeGotra || undefined,
                   specialInstructions: specialInstructions || undefined,
+                  additionalCharges: selectedAdditionalCharges.length > 0 ? selectedAdditionalCharges : undefined,
                   razorpayOrderId: response.razorpay_order_id,
                   razorpayPaymentId: response.razorpay_payment_id,
                   razorpaySignature: response.razorpay_signature,
@@ -199,10 +217,18 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
     }
   };
 
+  useEffect(() => {
+    setSelectedChargeStates({});
+  }, [puja]);
+
   if (!puja) return null;
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const selectedAdditionalCharges = puja.additionalCharges?.filter((_, index) => selectedChargeStates[index]) || [];
+  const additionalTotal = selectedAdditionalCharges.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const finalAmount = puja.price + additionalTotal;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -219,18 +245,53 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
 
         <div className="space-y-6 py-4">
           {/* Puja Details */}
-          <div className="rounded-lg bg-muted/50 p-4">
+          <div className="rounded-lg bg-muted/50 p-4 space-y-4">
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">Duration</p>
                 <p className="font-medium">{puja.durationMinutes ?? puja.duration_minutes ?? 60} minutes</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Amount</p>
+                <p className="text-sm text-muted-foreground">Base Amount</p>
                 <p className="font-heading text-xl font-bold text-primary">
                   ₹{puja.price.toLocaleString("en-IN")}
                 </p>
               </div>
+            </div>
+            {puja.additionalCharges?.length ? (
+              <div className="rounded-xl border border-border/60 bg-background p-4 space-y-3">
+                <p className="text-sm font-semibold">Optional Add-on Charges</p>
+                <div className="space-y-2">
+                  {puja.additionalCharges.map((item, index) => (
+                    <label key={`${item.label}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 px-3 py-3">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={Boolean(selectedChargeStates[index])}
+                          onCheckedChange={(checked) =>
+                            setSelectedChargeStates((prev) => ({
+                              ...prev,
+                              [index]: Boolean(checked),
+                            }))
+                          }
+                        />
+                        <div>
+                          <p className="font-medium">{item.label}</p>
+                          <p className="text-sm text-muted-foreground">₹{Number(item.amount || 0).toLocaleString("en-IN")}</p>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <div className="rounded-xl border border-border/60 bg-background p-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total Payable</span>
+                <span className="font-heading text-xl font-bold text-primary">₹{finalAmount.toLocaleString("en-IN")}</span>
+              </div>
+              {additionalTotal > 0 ? (
+                <p className="text-xs text-muted-foreground">Includes ₹{additionalTotal.toLocaleString("en-IN")} in selected add-ons.</p>
+              ) : null}
             </div>
           </div>
 
@@ -324,7 +385,7 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
                 Processing...
               </>
             ) : (
-              <>Pay ₹{puja.price.toLocaleString("en-IN")}</>
+              <>Pay ₹{finalAmount.toLocaleString("en-IN")}</>
             )}
           </Button>
         </div>

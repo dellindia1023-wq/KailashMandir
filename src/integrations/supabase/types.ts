@@ -1176,6 +1176,7 @@ export type Database = {
       puja_bookings: {
         Row: {
           amount: number
+          additional_charges: Json | null
           assigned_priest_id: string | null
           booking_date: string
           booking_status: string | null
@@ -1195,6 +1196,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          additional_charges?: Json | null
           assigned_priest_id?: string | null
           booking_date: string
           booking_status?: string | null
@@ -1374,6 +1376,7 @@ export type Database = {
           trending: boolean
           updated_at: string | null
           price: number
+          additional_charges: Json | null
         }
         Insert: {
           booking_enabled?: boolean
@@ -1395,6 +1398,7 @@ export type Database = {
           trending?: boolean
           updated_at?: string | null
           price?: number
+          additional_charges?: Json | null
         }
         Update: {
           booking_enabled?: boolean

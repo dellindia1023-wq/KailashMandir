@@ -89,6 +89,7 @@ const defaultFormState = {
   image_url: "",
   is_active: true,
   benefits: [] as string[],
+  additional_charges: [] as Array<{ label: string; amount: number }>,
   media: [] as PujaMediaItem[],
 };
 
@@ -207,6 +208,12 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
         recommended: settings.recommended ?? false,
         priority: settings.priority ?? 0,
         sort_order: settings.sort_order ?? puja.sort_order ?? 0,
+        additional_charges: Array.isArray(settings.additional_charges)
+          ? settings.additional_charges.map((item: any) => ({
+              label: item?.label || "",
+              amount: Number(item?.amount ?? 0),
+            }))
+          : [],
         seo_title: seo.seo_title || "",
         seo_description: seo.seo_description || "",
         seo_keywords: seo.seo_keywords || "",
@@ -432,6 +439,7 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
               recommended: formData.recommended,
               priority: formData.priority,
               sort_order: formData.sort_order,
+              additional_charges: formData.additional_charges.length > 0 ? formData.additional_charges : null,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "puja_id" }
@@ -595,6 +603,34 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
     setFormData((prev) => ({
       ...prev,
       benefits: prev.benefits.filter((_, idx) => idx !== index),
+    }));
+  };
+
+  const addAdditionalCharge = () => {
+    setFormData((prev) => ({
+      ...prev,
+      additional_charges: [...prev.additional_charges, { label: "", amount: 0 }],
+    }));
+  };
+
+  const updateAdditionalCharge = (index: number, key: "label" | "amount", value: string | number) => {
+    setFormData((prev) => ({
+      ...prev,
+      additional_charges: prev.additional_charges.map((item, idx) =>
+        idx !== index
+          ? item
+          : {
+              ...item,
+              [key]: key === "amount" ? Number(value) : value,
+            }
+      ),
+    }));
+  };
+
+  const removeAdditionalCharge = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      additional_charges: prev.additional_charges.filter((_, idx) => idx !== index),
     }));
   };
 
@@ -1060,6 +1096,49 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
               value={formData.seo_description}
               onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
             />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Additional Charges</Label>
+              <Button type="button" variant="outline" onClick={addAdditionalCharge}>
+                Add Charge
+              </Button>
+            </div>
+            {formData.additional_charges.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Add optional charge items that users can select during booking.</p>
+            ) : (
+              <div className="space-y-3">
+                {formData.additional_charges.map((item, index) => (
+                  <div key={index} className="grid gap-3 rounded-lg border border-input p-4 md:grid-cols-[1fr_auto]">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Charge Label</Label>
+                        <Input
+                          value={item.label}
+                          onChange={(e) => updateAdditionalCharge(index, "label", e.target.value)}
+                          placeholder="e.g. Puja Samagri"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Amount (₹)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={item.amount}
+                          onChange={(e) => updateAdditionalCharge(index, "amount", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end justify-end">
+                      <Button type="button" variant="outline" onClick={() => removeAdditionalCharge(index)}>
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">

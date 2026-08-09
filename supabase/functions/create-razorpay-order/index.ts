@@ -68,15 +68,10 @@ serve(async (req: Request) => {
       devoteeName,
       devoteeGotra,
       specialInstructions,
+      additionalCharges,
       createPendingBooking,
       existingOrderId,
     } = body as any;
-
-    const { data: isAdminData, error: roleCheckError } = await supabaseAdmin.rpc("has_role", {
-      _user_id: user.id,
-      _role: "admin",
-    });
-    const isAdmin = !!isAdminData;
 
     let orderAmount = amount;
     const notes: Record<string, unknown> = {};
@@ -165,6 +160,12 @@ serve(async (req: Request) => {
       const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
       const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
       const safeName = devoteeName.trim().slice(0, 100);
+      const safeCharges = Array.isArray(additionalCharges)
+        ? additionalCharges.map((charge: any) => ({
+            label: typeof charge.label === "string" ? charge.label.trim().slice(0, 100) : "",
+            amount: typeof charge.amount === "number" && Number.isFinite(charge.amount) ? charge.amount : 0,
+          }))
+        : null;
 
       createBookingPayload = {
         user_id: user.id,
@@ -177,6 +178,7 @@ serve(async (req: Request) => {
         amount: amount,
         payment_status: "pending",
         booking_status: "pending",
+        additional_charges: safeCharges,
       };
 
       notes.puja_id = pujaId;

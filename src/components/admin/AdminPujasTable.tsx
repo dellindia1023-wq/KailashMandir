@@ -65,21 +65,51 @@ export const AdminPujasTable = () => {
   const handleEdit = async (puja: Puja) => {
     try {
       setLoading(true);
-      // Fetch single puja record only from the base table. Detailed related
-      // data may not be present on all environments; AdminPujaDialog will
-      // handle loading/upserting related rows and fall back if needed.
       const { data, error } = await supabase
         .from("pujas")
         .select("*")
         .eq("id", puja.id)
         .maybeSingle();
 
+      const selected = { ...(data || puja) } as Puja;
       if (error) {
         console.error("Error loading puja details:", error);
         toast.error("Failed to load puja details. Please try again.");
-        setSelectedPuja(puja);
-      } else {
-        setSelectedPuja(data || puja);
+        setSelectedPuja(selected);
+        return;
+      }
+
+      try {
+        const relationFetches = await Promise.allSettled([
+          supabase.from("puja_details").select("*").eq("puja_id", puja.id).maybeSingle(),
+          supabase.from("puja_booking_settings").select("*").eq("puja_id", puja.id).maybeSingle(),
+          supabase.from("puja_seo").select("*").eq("puja_id", puja.id).maybeSingle(),
+          supabase.from("puja_media").select("*").eq("puja_id", puja.id),
+          supabase.from("puja_benefits").select("*").eq("puja_id", puja.id),
+        ]);
+
+        const detailedPuja = { ...selected } as Puja;
+
+        if (relationFetches[0].status === "fulfilled") {
+          detailedPuja.puja_details = relationFetches[0].value.data || selected.puja_details;
+        }
+        if (relationFetches[1].status === "fulfilled") {
+          detailedPuja.puja_booking_settings = relationFetches[1].value.data || selected.puja_booking_settings;
+        }
+        if (relationFetches[2].status === "fulfilled") {
+          detailedPuja.puja_seo = relationFetches[2].value.data || selected.puja_seo;
+        }
+        if (relationFetches[3].status === "fulfilled") {
+          detailedPuja.puja_media = relationFetches[3].value.data || selected.puja_media;
+        }
+        if (relationFetches[4].status === "fulfilled") {
+          detailedPuja.puja_benefits = relationFetches[4].value.data || selected.puja_benefits;
+        }
+
+        setSelectedPuja(detailedPuja);
+      } catch (relationError) {
+        console.warn("Unable to load puja normalized relations, editing base data only:", relationError);
+        setSelectedPuja(selected);
       }
     } finally {
       setLoading(false);
