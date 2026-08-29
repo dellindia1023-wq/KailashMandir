@@ -306,6 +306,16 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error("Puja name is required");
+      return;
+    }
+
+    if (!formData.duration_minutes || formData.duration_minutes <= 0) {
+      toast.error("Duration must be greater than 0");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -313,7 +323,7 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
       const categoryName = formData.category_text.trim() || categories.find((category) => category.id === categoryId)?.name || "";
       const buildPujaPayload = (includeCategoryId = true) => {
         const base: Record<string, any> = {
-          name: formData.name,
+          name: formData.name.trim(),
           description: formData.description || null,
           price: formData.price,
           duration_minutes: formData.duration_minutes,
@@ -333,12 +343,8 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
           if (error) throw error;
         } catch (err: any) {
           if (err?.message?.includes("category_id") || String(err).includes("category_id") || (err?.code === "PGRST204")) {
-            try {
-              const { error } = await supabaseAny.from("pujas").update(buildPujaPayload(false)).eq("id", pujaId);
-              if (error) throw error;
-            } catch (e) {
-              throw e;
-            }
+            const { error: updateError } = await supabaseAny.from("pujas").update(buildPujaPayload(false)).eq("id", pujaId);
+            if (updateError) throw updateError;
           } else {
             // Try REST fallback for update when supabase client fails (schema/cache issues)
             try {
@@ -417,6 +423,13 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
         }
       }
 
+      const normalizedAdditionalCharges = formData.additional_charges
+        .map((item) => ({
+          label: item.label?.trim() || "",
+          amount: Number(item.amount ?? 0),
+        }))
+        .filter((item) => item.label.length > 0);
+
       try {
         await supabaseAny
           .from("puja_booking_settings")
@@ -439,7 +452,7 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
               recommended: formData.recommended,
               priority: formData.priority,
               sort_order: formData.sort_order,
-              additional_charges: formData.additional_charges.length > 0 ? formData.additional_charges : null,
+              additional_charges: normalizedAdditionalCharges.length > 0 ? normalizedAdditionalCharges : null,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "puja_id" }

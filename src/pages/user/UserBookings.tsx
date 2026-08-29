@@ -168,7 +168,7 @@ const UserBookings = () => {
                     <Badge className={paymentStatus.color}>{paymentStatus.label}</Badge>
                   </div>
                   {(booking.payment_status === "completed" || booking.payment_status === "paid") && (
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => generateReceipt({
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={async () => await generateReceipt({
                       type: "booking", id: booking.id, name: booking.pujas.name, date: formatDate(booking.booking_date), amount: booking.amount,
                       details: { Devotee: booking.devotee_name, Gotra: booking.devotee_gotra || "—", Date: formatDate(booking.booking_date), Time: formatTime(booking.booking_time), Category: booking.pujas.category },
                     })}>

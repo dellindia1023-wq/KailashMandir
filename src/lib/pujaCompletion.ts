@@ -41,6 +41,13 @@ export interface CompletionSettings {
   updated_at: string;
 }
 
+const isMissingCompletionTableError = (error: any) => {
+  const message = String(error?.message ?? "");
+  const code = String(error?.code ?? "");
+
+  return code === "42P01" || code === "PGRST205" || message.includes("does not exist") || message.includes("Could not find the table") || message.includes("not found") || message.includes("doesn't exist");
+};
+
 export const getVisibleCompletionMedia = (media: CompletionMediaItem[]) =>
   media.filter((item) => item.approval_status === "approved" && !item.is_hidden);
 
@@ -73,6 +80,10 @@ export const getCompletionSettings = async () => {
     .maybeSingle() as { data: CompletionSettings | null; error: any };
 
   if (error) {
+    if (isMissingCompletionTableError(error)) {
+      console.warn("Completion workflow tables are not available yet. Skipping settings lookup.");
+      return null;
+    }
     console.error("Failed to load completion settings", error);
     return null;
   }
@@ -111,7 +122,12 @@ export const fetchCompletionForBooking = async (bookingId: string) => {
     .eq("booking_id", bookingId)
     .maybeSingle() as { data: CompletionRecord | null; error: any };
 
-  if (recordError) throw recordError;
+  if (recordError) {
+    if (isMissingCompletionTableError(recordError)) {
+      return { record: null, media: [] as CompletionMediaItem[] };
+    }
+    throw recordError;
+  }
 
   if (!recordData) {
     return { record: null, media: [] as CompletionMediaItem[] };
@@ -123,17 +139,29 @@ export const fetchCompletionForBooking = async (bookingId: string) => {
     .eq("completion_id", recordData.id)
     .order("created_at", { ascending: true }) as { data: CompletionMediaItem[] | null; error: any };
 
-  if (mediaError) throw mediaError;
+  if (mediaError) {
+    if (isMissingCompletionTableError(mediaError)) {
+      return { record: recordData as CompletionRecord, media: [] as CompletionMediaItem[] };
+    }
+    throw mediaError;
+  }
 
   return { record: recordData as CompletionRecord, media: (mediaData || []) as CompletionMediaItem[] };
 };
 
 export const saveCompletionRecord = async (bookingId: string, payload: Partial<CompletionRecord>) => {
-  const { data: existingRecord } = await supabaseAny
+  const { data: existingRecord, error: existingSelectError } = await supabaseAny
     .from("puja_completion_records")
     .select("id")
     .eq("booking_id", bookingId)
     .maybeSingle() as { data: { id: string } | null; error: any };
+
+  if (existingSelectError) {
+    if (isMissingCompletionTableError(existingSelectError)) {
+      throw new Error("The puja completion workflow tables are missing in Supabase. Please run the completion migration.");
+    }
+    throw existingSelectError;
+  }
 
   const recordPayload = {
     booking_id: bookingId,

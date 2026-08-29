@@ -18,7 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import aartiImg from "@/assets/gallery/shivling-shringar-1.jpg";
 import { getPujaCategoryLabel, getPujaImage, mergePujaCmsRelations, normalizePujaRecord, type NormalizedPuja, type PujaCmsRecord } from "@/lib/pujaCms";
 
-interface Puja extends NormalizedPuja {}
+type Puja = NormalizedPuja;
 
 const Pujas = () => {
   const { user } = useAuth();

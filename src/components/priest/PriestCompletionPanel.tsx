@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Upload, CheckCircle2, ImageIcon, VideoIcon, FileText, PackageCheck } from "lucide-react";
 import { addCompletionMedia, fetchCompletionForBooking, getCompletionSettings, saveCompletionRecord, uploadCompletionMedia } from "@/lib/pujaCompletion";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PriestCompletionPanelProps {
   bookingId: string;
@@ -115,7 +116,31 @@ const PriestCompletionPanel = ({ bookingId, bookingLabel, onSaved }: PriestCompl
       onSaved?.();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to save completion details");
+      const message = (error as any)?.message || "Failed to save completion details";
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!completionId) {
+      toast.error("Please save completion details before marking completed.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { data, error } = await supabase.from("puja_bookings").update({ booking_status: "completed", updated_at: new Date().toISOString() }).eq("id", bookingId).select();
+      if (error) throw error;
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        throw new Error("No booking was updated. Please refresh and try again.");
+      }
+      toast.success("Booking marked completed");
+      onSaved?.();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Failed to mark booking as completed");
     } finally {
       setSaving(false);
     }
@@ -202,6 +227,9 @@ const PriestCompletionPanel = ({ bookingId, bookingLabel, onSaved }: PriestCompl
           <Button onClick={handleSave} disabled={saving || uploading}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
             Save Completion Details
+          </Button>
+          <Button variant="ghost" onClick={handleMarkCompleted} disabled={saving || uploading}>
+            Mark Completed
           </Button>
           <Button variant="outline" onClick={() => void fetchData()} disabled={loading || uploading}>
             <Upload className="mr-2 h-4 w-4" />

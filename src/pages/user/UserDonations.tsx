@@ -94,7 +94,7 @@ const UserDonations = () => {
                   <Badge className={getTierColor(donation.tier)}>{capitalize(donation.tier)}</Badge>
                   <Badge className={getStatusColor(donation.status)}>{capitalize(donation.status)}</Badge>
                   {donation.status === "completed" && (
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => generateReceipt({
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={async () => await generateReceipt({
                       type: "donation", id: donation.id, name: `${capitalize(donation.tier)} Donation`, date: formatDate(donation.created_at), amount: donation.amount,
                       details: { Tier: capitalize(donation.tier), "Transaction ID": donation.transaction_id || "—", "Payment Method": donation.payment_method || "—", Date: formatDate(donation.created_at) },
                     })}>

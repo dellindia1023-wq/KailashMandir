@@ -437,7 +437,7 @@ const Dashboard = () => {
                                   variant="ghost"
                                   size="sm"
                                   className="text-xs"
-                                  onClick={() => generateReceipt({
+                                  onClick={async () => await generateReceipt({
                                     type: "booking",
                                     id: booking.id,
                                     name: booking.pujas.name,
@@ -458,20 +458,7 @@ const Dashboard = () => {
                               {/* Action buttons for upcoming bookings */}
                               {status.isUpcoming && (booking.payment_status === "completed" || booking.payment_status === "paid") && (
                                 <div className="flex flex-wrap gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleSendReminder(booking.id)}
-                                    disabled={sendingReminder === booking.id}
-                                    className="text-xs"
-                                  >
-                                    {sendingReminder === booking.id ? (
-                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    ) : (
-                                      <Mail className="h-3 w-3 mr-1" />
-                                    )}
-                                    Reminder
-                                  </Button>
+                                  {/* Reminder action is admin-only; removed for devotees */}
                                   {status.canModify && (
                                     <>
                                       <Button
@@ -661,7 +648,7 @@ const Dashboard = () => {
                                   variant="ghost"
                                   size="sm"
                                   className="text-xs"
-                                  onClick={() => generateReceipt({
+                                  onClick={async () => await generateReceipt({
                                     type: "donation",
                                     id: donation.id,
                                     name: `${capitalize(donation.tier)} Donation`,

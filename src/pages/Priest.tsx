@@ -91,12 +91,16 @@ const Priest = () => {
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     setUpdatingStatus(bookingId);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("puja_bookings")
         .update({ booking_status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", bookingId);
+        .eq("id", bookingId)
+        .select();
 
       if (error) throw error;
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        throw new Error("No booking was updated. Please refresh and try again.");
+      }
       setBookings(bookings.map(b => b.id === bookingId ? { ...b, booking_status: newStatus } : b));
       toast.success("Status updated successfully");
     } catch (error) {

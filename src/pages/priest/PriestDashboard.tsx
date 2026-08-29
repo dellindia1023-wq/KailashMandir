@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import PriestCompletionPanel from "@/components/priest/PriestCompletionPanel";
+import { fetchCompletionForBooking } from "@/lib/pujaCompletion";
 import {
   Loader2, Calendar, Clock, User,
   CheckCircle2, Circle, RefreshCw, BookOpen, AlertCircle
@@ -68,11 +69,25 @@ const PriestDashboard = () => {
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     setUpdatingStatus(bookingId);
     try {
-      const { error } = await supabase
+      // Prevent marking completed unless completion workflow has been saved
+      if (newStatus === "completed") {
+        const { record } = await fetchCompletionForBooking(bookingId);
+        if (!record || !record.completed_at) {
+          toast.error("Please save the completion workflow before marking this booking as Completed.");
+          setUpdatingStatus(null);
+          return;
+        }
+      }
+
+      const { data, error } = await supabase
         .from("puja_bookings")
         .update({ booking_status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", bookingId);
+        .eq("id", bookingId)
+        .select();
       if (error) throw error;
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        throw new Error("No booking was updated. Please refresh and try again.");
+      }
       setBookings(bookings.map(b => b.id === bookingId ? { ...b, booking_status: newStatus } : b));
       toast.success("Status updated");
     } catch (error) {

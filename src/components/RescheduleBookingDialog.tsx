@@ -60,25 +60,22 @@ export const RescheduleBookingDialog = ({
     setLoading(true);
 
     try {
+      // Revert to updating the booking directly (previous behavior).
       const { error } = await supabase
         .from("puja_bookings")
-        .update({
-          booking_date: format(date, "yyyy-MM-dd"),
-          booking_time: time,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ booking_date: format(date, "yyyy-MM-dd"), booking_time: time, updated_at: new Date().toISOString() })
         .eq("id", booking.id);
 
       if (error) throw error;
 
-      toast.success("Booking rescheduled successfully! 🙏");
+      toast.success("Booking rescheduled");
       onSuccess();
       onOpenChange(false);
       setDate(undefined);
       setTime("");
     } catch (error: any) {
       console.error("Reschedule error:", error);
-      toast.error("Failed to reschedule booking");
+      toast.error(error?.message || "Failed to reschedule booking");
     } finally {
       setLoading(false);
     }

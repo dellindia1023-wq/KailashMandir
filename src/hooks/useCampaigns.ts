@@ -24,7 +24,7 @@ export interface CampaignContent {
   countdown_target?: string;
 }
 
-export interface CampaignRow extends SupabaseCampaignRow {}
+export type CampaignRow = SupabaseCampaignRow;
 
 export const fetchCampaigns = async (): Promise<CampaignRow[]> => {
   const { data, error } = await supabase
@@ -41,11 +41,13 @@ export const useCampaigns = (context: CampaignContext, enabled = true) => {
 
   if (!queryClient) {
     return {
-      data: [] as Campaign[],
+      data: [],
       isLoading: false,
       isError: false,
       error: null,
-    };
+      isSuccess: true,
+      refetch: async () => ({ data: [] }),
+    } as any;
   }
 
   const query = useQuery({
@@ -77,21 +79,23 @@ export const fetchCampaignBySlug = async (slug: string) => {
 export const useCampaignBySlug = (slug: string | null | undefined, enabled = true) => {
   const queryClient = useContext(QueryClientContext);
 
-  if (!queryClient || !slug) {
+  if (!queryClient) {
     return {
-      data: null as Campaign | null,
+      data: null,
       isLoading: false,
       isError: false,
       error: null,
-    };
+      isSuccess: true,
+      refetch: async () => ({ data: null }),
+    } as any;
   }
 
   const query = useQuery({
     queryKey: ["campaign", slug],
     queryFn: async () => {
-      return await fetchCampaignBySlug(slug);
+      return await fetchCampaignBySlug(slug as string);
     },
-    enabled,
+    enabled: Boolean(slug) && enabled,
     staleTime: 1000 * 60 * 2,
     refetchOnWindowFocus: false,
   });

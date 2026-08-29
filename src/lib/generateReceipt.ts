@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ReceiptData {
   type: "booking" | "donation";
@@ -9,9 +10,21 @@ interface ReceiptData {
   details: Record<string, string>;
 }
 
-export function generateReceipt(data: ReceiptData) {
+async function fetchAboutSettings() {
+  try {
+    const { data } = await supabase.from("about_settings").select("*").maybeSingle();
+    return data as any;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function generateReceipt(data: ReceiptData) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
+  const about = await fetchAboutSettings();
+  const templeName = about?.hero_title || "Shri Kailash Mahadev Temple";
+  const templeSub = about?.hero_subtitle || "Agra, Uttar Pradesh | Om Namah Shivaya";
 
   // Header
   doc.setFillColor(234, 88, 12); // primary/saffron
@@ -20,10 +33,10 @@ export function generateReceipt(data: ReceiptData) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("Shri Kailash Mahadev Temple", pageWidth / 2, 18, { align: "center" });
+  doc.text(templeName, pageWidth / 2, 18, { align: "center" });
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("Agra, Uttar Pradesh | Om Namah Shivaya", pageWidth / 2, 28, { align: "center" });
+  doc.text(templeSub, pageWidth / 2, 28, { align: "center" });
   doc.text(data.type === "booking" ? "BOOKING RECEIPT" : "DONATION RECEIPT", pageWidth / 2, 36, { align: "center" });
 
   // Receipt body
@@ -75,15 +88,30 @@ export function generateReceipt(data: ReceiptData) {
   doc.setFont("helvetica", "normal");
   doc.text("This is a computer-generated receipt. Donations are eligible for tax exemption under Section 80G.", 20, y);
   y += 6;
-  doc.text("For queries, contact: temple@kailashmahadevagra.com", 20, y);
+  const contactEmail = about?.contact_email || "temple@kailashmahadevagra.com";
+  doc.text(`For queries, contact: ${contactEmail}`, 20, y);
+
+  // Footer with social links if available
+  const footerY = doc.internal.pageSize.getHeight() - 35;
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  if (about?.social_links) {
+    const socials = about.social_links as Record<string, string>;
+    let sx = 20;
+    Object.entries(socials).forEach(([k, v]) => {
+      if (!v) return;
+      doc.text(`${k.toUpperCase()}: ${v}`, sx, footerY);
+      sx += 70;
+    });
+  }
 
   // Footer
-  const footerY = doc.internal.pageSize.getHeight() - 15;
+  const footerY2 = doc.internal.pageSize.getHeight() - 15;
   doc.setFillColor(234, 88, 12);
-  doc.rect(0, footerY - 5, pageWidth, 20, "F");
+  doc.rect(0, footerY2 - 5, pageWidth, 20, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(8);
-  doc.text("|| Om Namah Shivaya || Har Har Mahadev ||", pageWidth / 2, footerY + 3, { align: "center" });
+  doc.text("|| Om Namah Shivaya || Har Har Mahadev ||", pageWidth / 2, footerY2 + 3, { align: "center" });
 
   doc.save(`${data.type}-receipt-${data.id.slice(0, 8)}.pdf`);
 }

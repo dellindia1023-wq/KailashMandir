@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import KnowledgeHubPage from "@/pages/KnowledgeHubPage";
@@ -72,10 +73,14 @@ vi.mock("@/lib/contentSeo", () => ({
 
 describe("KnowledgeHubPage", () => {
   it("renders a dedicated slug link for each knowledge article", () => {
+    const queryClient = new QueryClient();
+
     render(
-      <MemoryRouter>
-        <KnowledgeHubPage />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <KnowledgeHubPage />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     const articleLinks = screen.getAllByRole("link", { name: /How can I book a puja\?/i });
