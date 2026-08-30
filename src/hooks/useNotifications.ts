@@ -52,42 +52,54 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotif = payload.new as unknown as Notification;
-          setNotifications((prev) => {
-            // Dedup check
-            if (prev.some((n) => n.id === newNotif.id)) return prev;
-            return [newNotif, ...prev];
-          });
+    let channel: any | null = null;
+    try {
+      channel = supabase
+        .channel("notifications-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotif = payload.new as unknown as Notification;
+            setNotifications((prev) => {
+              // Dedup check
+              if (prev.some((n) => n.id === newNotif.id)) return prev;
+              return [newNotif, ...prev];
+            });
 
-          // Show browser notification if permission granted
-          if ("Notification" in window && window.Notification.permission === "granted") {
-            try {
-              new window.Notification(newNotif.title, {
-                body: newNotif.message,
-                icon: "/icons/icon-512x512.png",
-                tag: newNotif.id,
-              });
-            } catch (_) {
-              // Service worker may handle this instead
+            // Show browser notification if permission granted
+            if ("Notification" in window && window.Notification.permission === "granted") {
+              try {
+                new window.Notification(newNotif.title, {
+                  body: newNotif.message,
+                  icon: "/icons/icon-512x512.png",
+                  tag: newNotif.id,
+                });
+              } catch (_) {
+                // Service worker may handle this instead
+              }
             }
           }
-        }
-      )
-      .subscribe();
+        );
+
+      // subscribe and swallow subscription errors to avoid uncaught console noise
+      try {
+        channel.subscribe();
+      } catch (subErr) {
+        console.warn("Notifications realtime subscription failed (non-fatal):", subErr);
+      }
+    } catch (err) {
+      console.warn("Failed to initialize notifications realtime (non-fatal):", err);
+      channel = null;
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user]);
 

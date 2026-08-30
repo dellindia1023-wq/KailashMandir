@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { getCompletionWorkflowSummary, getVisibleCompletionMedia } from "@/lib/pujaCompletion";
+import { getCompletionWorkflowSummary, getVisibleCompletionMedia, isMissingCompletionTableError, normalizeDateTimeLocalInput } from "@/lib/pujaCompletion";
 
 describe("puja completion workflow", () => {
+  it("recognizes missing Supabase tables as a workflow setup issue", () => {
+    expect(isMissingCompletionTableError({ code: "42P01", message: "relation \"public.puja_completion_records\" does not exist" })).toBe(true);
+    expect(isMissingCompletionTableError({ code: "PGRST205", message: "Could not find the table" })).toBe(true);
+    expect(isMissingCompletionTableError({ code: "23505", message: "duplicate key value" })).toBe(false);
+  });
+
   it("marks approved records as shareable to devotees", () => {
     const summary = getCompletionWorkflowSummary({ approval_status: "approved" }, []);
 
@@ -18,5 +24,11 @@ describe("puja completion workflow", () => {
 
     expect(visible).toHaveLength(1);
     expect(visible[0].id).toBe("1");
+  });
+
+  it("normalizes ISO timestamps for datetime-local inputs", () => {
+    expect(normalizeDateTimeLocalInput("2026-08-29T15:15:00+00:00")).toBe("2026-08-29T15:15");
+    expect(normalizeDateTimeLocalInput("2026-08-29T15:15")).toBe("2026-08-29T15:15");
+    expect(normalizeDateTimeLocalInput("")).toBe("");
   });
 });

@@ -15,6 +15,7 @@ import { AssignPriestDialog } from "./AssignPriestDialog";
 import { toast } from "sonner";
 import { Trash2, CreditCard, RefreshCw as RefreshIcon } from "lucide-react";
 import { deleteCompletionMedia, fetchCompletionForBooking, getCompletionSettings, getCompletionWorkflowSummary, getVisibleCompletionMedia, setCompletionApprovalRequirement, updateCompletionMedia, updateCompletionRecordStatus, type CompletionApprovalStatus, type CompletionMediaItem, type CompletionRecord } from "@/lib/pujaCompletion";
+import CompletionMediaPreview from "@/components/CompletionMediaPreview";
 
 interface Booking {
   id: string;
@@ -522,12 +523,8 @@ export const AdminBookingsTable = () => {
                     <h4 className="font-medium">Media review</h4>
                     <div className="grid gap-3 md:grid-cols-2">
                       {selectedReviewData.media.map((item) => (
-                        <div key={item.id} className="rounded-xl border p-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <Badge variant="secondary">{item.media_type}</Badge>
-                            <Badge variant={item.is_hidden ? "outline" : "default"}>{item.is_hidden ? "Hidden" : "Visible"}</Badge>
-                          </div>
-                          <p className="mt-2 break-all text-sm text-muted-foreground">{item.url}</p>
+                        <div key={item.id}>
+                          <CompletionMediaPreview item={item} />
                           <div className="mt-3 flex flex-wrap gap-2">
                             <Button variant="outline" size="sm" onClick={() => void handleMediaAction(item.id, item.is_hidden ? "show" : "hide")}>{item.is_hidden ? "Show" : "Hide"}</Button>
                             <Button variant="destructive" size="sm" onClick={() => void handleMediaAction(item.id, "delete")}>Delete</Button>

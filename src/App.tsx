@@ -61,6 +61,7 @@ const AdminEvents = lazy(() => import("./pages/admin/AdminEvents"));
 const AdminNotices = lazy(() => import("./pages/admin/AdminNotices"));
 const AdminCampaigns = lazy(() => import("./pages/admin/AdminCampaigns"));
 const AdminGallery = lazy(() => import("./pages/admin/AdminGallery"));
+const AdminRescheduleRequests = lazy(() => import("./pages/admin/RescheduleRequests"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
@@ -158,6 +159,7 @@ const routeDefinitions: RouteObject[] = [
       { path: "notices", element: <AdminNotices /> },
       { path: "campaigns", element: <AdminCampaigns /> },
       { path: "gallery", element: <AdminGallery /> },
+      { path: "reschedule-requests", element: <AdminRescheduleRequests /> },
       { path: "blogs", element: <AdminBlogsPage /> },
       { path: "knowledge-hub", element: <AdminKnowledgeHubPage /> },
       { path: "about", element: <AdminAboutPage /> },

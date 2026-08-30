@@ -41,11 +41,68 @@ export interface CompletionSettings {
   updated_at: string;
 }
 
-const isMissingCompletionTableError = (error: any) => {
+export const isMissingCompletionTableError = (error: any) => {
   const message = String(error?.message ?? "");
   const code = String(error?.code ?? "");
 
   return code === "42P01" || code === "PGRST205" || message.includes("does not exist") || message.includes("Could not find the table") || message.includes("not found") || message.includes("doesn't exist");
+};
+
+export const getCompletionWorkflowErrorMessage = (error: any, fallback = "Failed to update completion workflow") => {
+  if (isMissingCompletionTableError(error)) {
+    return "The puja completion workflow tables are missing in Supabase. Run the migration in supabase/migrations/20260729000000_create_puja_completion_workflow.sql, then refresh the page.";
+  }
+
+  return error?.message || fallback;
+};
+
+export const doesCompletionWorkflowExist = async () => {
+  const probeTable = async (tableName: string) => {
+    const { error } = await supabaseAny
+      .from(tableName)
+      .select("id")
+      .limit(1)
+      .maybeSingle() as { error: any };
+
+    if (!error) return true;
+    if (isMissingCompletionTableError(error)) return false;
+    console.warn(`Unable to verify completion workflow table: ${tableName}`, error);
+    return false;
+  };
+
+  const [recordsExist, mediaExist, settingsExist] = await Promise.all([
+    probeTable("puja_completion_records"),
+    probeTable("puja_completion_media"),
+    probeTable("puja_completion_settings"),
+  ]);
+
+  return recordsExist && mediaExist && settingsExist;
+};
+
+export const ensureCompletionWorkflowSchema = async () => {
+  const workflowExists = await doesCompletionWorkflowExist();
+  if (!workflowExists) {
+    throw new Error("The puja completion workflow tables are missing in Supabase. Run the migration in supabase/migrations/20260729000000_create_puja_completion_workflow.sql, then refresh the page.");
+  }
+};
+
+export const normalizeDateTimeLocalInput = (value?: string | null) => {
+  if (!value) return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const withoutZone = trimmed
+    .replace(/\.\d{3}Z$/, "")
+    .replace(/Z$/, "")
+    .replace(/([+-]\d{2}:?\d{2})$/, "");
+
+  if (!withoutZone.includes("T")) return withoutZone;
+
+  const [datePart, timePart] = withoutZone.split("T");
+  if (!datePart || !timePart) return withoutZone;
+
+  const normalizedTime = timePart.replace(/:(\d{2}):00$/, ":$1");
+  return `${datePart}T${normalizedTime}`;
 };
 
 export const getVisibleCompletionMedia = (media: CompletionMediaItem[]) =>
@@ -72,6 +129,8 @@ export const getCompletionWorkflowSummary = (record: Partial<CompletionRecord> |
 };
 
 export const getCompletionSettings = async () => {
+  await ensureCompletionWorkflowSchema();
+
   const { data, error } = await supabaseAny
     .from("puja_completion_settings")
     .select("id, approval_required, updated_at")
@@ -112,10 +171,12 @@ export const uploadCompletionMedia = async (bookingId: string, file: File, media
   if (uploadError) throw uploadError;
 
   const { data } = supabase.storage.from("content").getPublicUrl(uploadData?.path || fileName);
-  return data.publicUrl;
+  return { url: data.publicUrl, path: uploadData?.path || fileName };
 };
 
 export const fetchCompletionForBooking = async (bookingId: string) => {
+  await ensureCompletionWorkflowSchema();
+
   const { data: recordData, error: recordError } = await supabaseAny
     .from("puja_completion_records")
     .select("*")
@@ -150,6 +211,8 @@ export const fetchCompletionForBooking = async (bookingId: string) => {
 };
 
 export const saveCompletionRecord = async (bookingId: string, payload: Partial<CompletionRecord>) => {
+  await ensureCompletionWorkflowSchema();
+
   const { data: existingRecord, error: existingSelectError } = await supabaseAny
     .from("puja_completion_records")
     .select("id")
@@ -166,12 +229,12 @@ export const saveCompletionRecord = async (bookingId: string, payload: Partial<C
   const recordPayload = {
     booking_id: bookingId,
     completion_notes: payload.completion_notes ?? null,
-    completed_at: payload.completed_at ?? null,
+    completed_at: payload.completed_at ? payload.completed_at : null,
     prasad_dispatch_status: payload.prasad_dispatch_status ?? "pending",
     courier_tracking_number: payload.courier_tracking_number ?? null,
     certificate_url: payload.certificate_url ?? null,
     approval_status: payload.approval_status ?? "draft",
-    approval_required: payload.approval_required ?? true,
+    approval_required: payload.approval_required ?? false,
     admin_notes: payload.admin_notes ?? null,
     approved_at: payload.approved_at ?? null,
     updated_at: new Date().toISOString(),
@@ -200,6 +263,8 @@ export const saveCompletionRecord = async (bookingId: string, payload: Partial<C
 };
 
 export const addCompletionMedia = async (completionId: string, payload: Omit<CompletionMediaItem, "id" | "completion_id" | "created_at" | "updated_at">) => {
+  await ensureCompletionWorkflowSchema();
+
   const { data, error } = await supabaseAny
     .from("puja_completion_media")
     .insert({

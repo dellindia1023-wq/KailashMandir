@@ -60,15 +60,24 @@ export const RescheduleBookingDialog = ({
     setLoading(true);
 
     try {
-      // Revert to updating the booking directly (previous behavior).
-      const { error } = await supabase
-        .from("puja_bookings")
-        .update({ booking_date: format(date, "yyyy-MM-dd"), booking_time: time, updated_at: new Date().toISOString() })
-        .eq("id", booking.id);
+      // Create a reschedule request instead of updating booking directly
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !authData?.user) throw new Error("Your session has expired. Please log in again.");
 
+      const payload = {
+        booking_id: booking.id,
+        requested_date: format(date, "yyyy-MM-dd"),
+        requested_time: time,
+        user_id: authData.user.id,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as any;
+
+      const { data, error } = await supabase.from('reschedule_requests').insert(payload).select().maybeSingle();
       if (error) throw error;
 
-      toast.success("Booking rescheduled");
+      toast.success("Your reschedule request has been submitted. The requested date/time is subject to verification by Temple Authority. Please contact Temple Authority for final confirmation.");
       onSuccess();
       onOpenChange(false);
       setDate(undefined);

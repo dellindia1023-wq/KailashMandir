@@ -199,7 +199,14 @@ const SEOHead = ({
 
     // Preload Open Graph / LCP image to improve LCP and Lighthouse scores
     if (ogImage) {
-      setLink("preload", ogImage, "preload-og-image", { as: "image", crossorigin: "anonymous" });
+      try {
+        // Validate URL - allow absolute or site-relative paths
+        const resolved = new URL(ogImage, BASE_URL).toString();
+        setLink("preload", resolved, "preload-og-image", { as: "image", crossorigin: "anonymous" });
+      } catch (e) {
+        // Invalid URL - skip preload to avoid browser console warnings
+        console.warn("SEOHead: skipping preload for invalid ogImage:", ogImage);
+      }
     }
 
     const postalAddress = { "@type": "PostalAddress", ...TEMPLE_ADDRESS };

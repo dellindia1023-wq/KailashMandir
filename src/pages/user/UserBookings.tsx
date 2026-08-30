@@ -7,13 +7,13 @@ import { CancelBookingDialog } from "@/components/CancelBookingDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useBookingEmail } from "@/hooks/useBookingEmail";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 import { toast } from "sonner";
 import { generateReceipt } from "@/lib/generateReceipt";
 import {
   Calendar, Clock, ArrowRight, Loader2, Mail, CalendarClock, X, Download
 } from "lucide-react";
+import CompletionMediaPreview from "@/components/CompletionMediaPreview";
 import { fetchCompletionForBooking, getCompletionWorkflowSummary, getVisibleCompletionMedia } from "@/lib/pujaCompletion";
 
 interface PujaBooking {
@@ -38,7 +38,7 @@ const UserBookings = () => {
   const [completionMap, setCompletionMap] = useState<Record<string, { record: any; media: any[] }>>({});
   const [rescheduleBooking, setRescheduleBooking] = useState<PujaBooking | null>(null);
   const [cancelBooking, setCancelBooking] = useState<PujaBooking | null>(null);
-  const { sendReminderEmail } = useBookingEmail();
+  // Reminder functionality is admin-only; removed from Devotee UI
 
   const fetchBookings = useCallback(async () => {
     if (!user) return;
@@ -151,10 +151,12 @@ const UserBookings = () => {
                         {completionData.record.completion_notes && <p className="mt-2 text-sm text-foreground">{completionData.record.completion_notes}</p>}
                         {completionData.record.courier_tracking_number && <p className="mt-2 text-xs text-muted-foreground">Tracking: {completionData.record.courier_tracking_number}</p>}
                         {visibleMedia.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2">
+                          <div className="mt-3 space-y-3">
                             {visibleMedia.map((item) => (
-                              <Badge key={item.id} variant="secondary">{item.media_type}</Badge>
-                            ))}
+                                  <div key={item.id}>
+                                    <CompletionMediaPreview item={item} />
+                                  </div>
+                                ))}
                           </div>
                         )}
                       </div>
@@ -177,9 +179,6 @@ const UserBookings = () => {
                   )}
                   {status.isUpcoming && (booking.payment_status === "completed" || booking.payment_status === "paid") && (
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" onClick={async () => { setSendingReminder(booking.id); await sendReminderEmail(booking.id); setSendingReminder(null); }} disabled={sendingReminder === booking.id} className="text-xs">
-                        {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Mail className="h-3 w-3 mr-1" />} Reminder
-                      </Button>
                       {status.canModify && (
                         <>
                           <Button variant="outline" size="sm" onClick={() => setRescheduleBooking(booking)} className="text-xs"><CalendarClock className="h-3 w-3 mr-1" /> Reschedule</Button>
