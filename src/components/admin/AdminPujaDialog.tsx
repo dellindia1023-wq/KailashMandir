@@ -89,7 +89,6 @@ const defaultFormState = {
   image_url: "",
   is_active: true,
   benefits: [] as string[],
-  additional_charges: [] as Array<{ label: string; amount: number }>,
   media: [] as PujaMediaItem[],
 };
 
@@ -100,57 +99,6 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
   const [categories, setCategories] = useState<PujaCategory[]>([]);
 
   const supabaseAny = supabase as any;
-
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-  const SUPABASE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string;
-
-  const restInsertPuja = async (payload: Record<string, any>) => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/pujas`, {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`REST insert failed: ${res.status} ${text}`);
-      }
-      const data = await res.json();
-      return data?.[0]?.id || null;
-    } catch (err) {
-      console.error("REST insert pujas failed:", err);
-      throw err;
-    }
-  };
-
-  const restUpdatePuja = async (id: string, payload: Record<string, any>) => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/pujas?id=eq.${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`REST update failed: ${res.status} ${text}`);
-      }
-      const data = await res.json();
-      return data?.[0]?.id || id;
-    } catch (err) {
-      console.error("REST update pujas failed:", err);
-      throw err;
-    }
-  };
 
   useEffect(() => {
     void fetchCategories();
@@ -208,12 +156,6 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
         recommended: settings.recommended ?? false,
         priority: settings.priority ?? 0,
         sort_order: settings.sort_order ?? puja.sort_order ?? 0,
-        additional_charges: Array.isArray(settings.additional_charges)
-          ? settings.additional_charges.map((item: any) => ({
-              label: item?.label || "",
-              amount: Number(item?.amount ?? 0),
-            }))
-          : [],
         seo_title: seo.seo_title || "",
         seo_description: seo.seo_description || "",
         seo_keywords: seo.seo_keywords || "",
@@ -276,114 +218,59 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
     }
   };
 
-  const ensureCategoryId = async (): Promise<string | null> => {
+  const ensureCategoryId = async () => {
     const trimmed = formData.category_text.trim();
     if (formData.category_id) return formData.category_id;
-    if (!trimmed) return null;
+    if (!trimmed) return "";
 
     const existing = categories.find((category) => category.name.toLowerCase() === trimmed.toLowerCase());
     if (existing) return existing.id;
 
     const slug = normalizeSlug(trimmed);
-    try {
-      const { data, error } = await supabaseAny
-        .from("puja_categories")
-        .insert({ name: trimmed, slug })
-        .select("id")
-        .maybeSingle();
+    const { data, error } = await supabaseAny
+      .from("puja_categories")
+      .insert({ name: trimmed, slug })
+      .select("id")
+      .maybeSingle();
 
-      if (error) {
-        console.warn("Unable to insert puja category, falling back to raw category text:", error);
-        return null;
-      }
-      await fetchCategories();
-      return data?.id || null;
-    } catch (err) {
-      console.warn("Unable to insert puja category, falling back to raw category text:", err);
-      return null;
+    if (error) {
+      console.warn("Unable to insert puja category, falling back to raw category text:", error);
+      return "";
     }
+    await fetchCategories();
+    return data?.id || "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error("Puja name is required");
-      return;
-    }
-
-    if (!formData.duration_minutes || formData.duration_minutes <= 0) {
-      toast.error("Duration must be greater than 0");
-      return;
-    }
-
     setLoading(true);
 
     try {
       const categoryId = await ensureCategoryId();
       const categoryName = formData.category_text.trim() || categories.find((category) => category.id === categoryId)?.name || "";
-      const buildPujaPayload = (includeCategoryId = true) => {
-        const base: Record<string, any> = {
-          name: formData.name.trim(),
-          description: formData.description || null,
-          price: formData.price,
-          duration_minutes: formData.duration_minutes,
-          category: categoryName || null,
-          image_url: formData.image_url || null,
-          is_active: formData.is_active,
-        };
-        if (includeCategoryId && categoryId) base.category_id = categoryId;
-        return base;
+      const updatedPuja = {
+        name: formData.name,
+        description: formData.description || null,
+        price: formData.price,
+        duration_minutes: formData.duration_minutes,
+        category: categoryName || null,
+        category_id: categoryId || null,
+        image_url: formData.image_url || null,
+        is_active: formData.is_active,
       };
 
       let pujaId = puja?.id;
       if (pujaId) {
-        // Try updating with category_id if available, otherwise retry without it.
-        try {
-          const { error } = await supabaseAny.from("pujas").update(buildPujaPayload(true)).eq("id", pujaId);
-          if (error) throw error;
-        } catch (err: any) {
-          if (err?.message?.includes("category_id") || String(err).includes("category_id") || (err?.code === "PGRST204")) {
-            const { error: updateError } = await supabaseAny.from("pujas").update(buildPujaPayload(false)).eq("id", pujaId);
-            if (updateError) throw updateError;
-          } else {
-            // Try REST fallback for update when supabase client fails (schema/cache issues)
-            try {
-              await restUpdatePuja(pujaId, buildPujaPayload(true));
-            } catch (restErr) {
-              throw err;
-            }
-          }
-        }
+        const { error } = await supabaseAny.from("pujas").update(updatedPuja).eq("id", pujaId);
+        if (error) throw error;
       } else {
-        // Insert new puja. Try with category_id first, then without if the column/table is missing.
-        try {
-          const { data, error } = await supabaseAny
-            .from("pujas")
-            .insert(buildPujaPayload(true))
-            .select("id")
-            .maybeSingle();
-          if (error) throw error;
-          pujaId = data?.id;
-        } catch (err: any) {
-          if (String(err)?.includes("category_id") || (err?.code === "PGRST204")) {
-            const { data, error } = await supabaseAny
-              .from("pujas")
-              .insert(buildPujaPayload(false))
-              .select("id")
-              .maybeSingle();
-            if (error) throw error;
-            pujaId = data?.id;
-          } else {
-            // Try REST fallback for insert when supabase client fails
-            try {
-              const restId = await restInsertPuja(buildPujaPayload(true));
-              if (restId) pujaId = restId;
-              else throw err;
-            } catch (restErr) {
-              throw err;
-            }
-          }
-        }
+        const { data, error } = await supabaseAny
+          .from("pujas")
+          .insert({ ...updatedPuja, name: formData.name })
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        pujaId = data?.id;
       }
 
       if (!pujaId) {
@@ -401,66 +288,15 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
         updated_at: new Date().toISOString(),
       };
 
-      try {
-        await supabaseAny
-          .from("puja_details")
-          .upsert(detailsPayload, { onConflict: "puja_id" });
-      } catch (err) {
-        console.warn("puja_details upsert failed, falling back to updating pujas table:", err);
-        // Fallback: update legacy columns on `pujas` if normalized table is unavailable
-        try {
-          await supabaseAny.from("pujas").update({
-            subtitle: detailsPayload.subtitle,
-            slug: detailsPayload.slug,
-            short_description: detailsPayload.short_description,
-            description: detailsPayload.description,
-            long_description: detailsPayload.long_description,
-            icon_url: detailsPayload.icon_url,
-            updated_at: detailsPayload.updated_at,
-          }).eq("id", pujaId);
-        } catch (e) {
-          console.error("Fallback update to pujas for details also failed:", e);
-        }
-      }
+      await supabaseAny
+        .from("puja_details")
+        .upsert(detailsPayload, { onConflict: "puja_id" });
 
-      const normalizedAdditionalCharges = formData.additional_charges
-        .map((item) => ({
-          label: item.label?.trim() || "",
-          amount: Number(item.amount ?? 0),
-        }))
-        .filter((item) => item.label.length > 0);
-
-      try {
-        await supabaseAny
-          .from("puja_booking_settings")
-          .upsert(
-            {
-              puja_id: pujaId,
-              price: formData.price,
-              discount_price: formData.discount_price || formData.price,
-              duration_minutes: formData.duration_minutes,
-              estimated_completion: formData.estimated_completion || null,
-              booking_enabled: formData.booking_enabled,
-              donation_enabled: formData.donation_enabled,
-              online_puja: formData.online_puja,
-              offline_puja: formData.offline_puja,
-              home_puja: formData.home_puja,
-              temple_puja: formData.temple_puja,
-              featured: formData.featured,
-              popular: formData.popular,
-              trending: formData.trending,
-              recommended: formData.recommended,
-              priority: formData.priority,
-              sort_order: formData.sort_order,
-              additional_charges: normalizedAdditionalCharges.length > 0 ? normalizedAdditionalCharges : null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "puja_id" }
-          );
-      } catch (err) {
-        console.warn("puja_booking_settings upsert failed, falling back to updating pujas table:", err);
-        try {
-          await supabaseAny.from("pujas").update({
+      await supabaseAny
+        .from("puja_booking_settings")
+        .upsert(
+          {
+            puja_id: pujaId,
             price: formData.price,
             discount_price: formData.discount_price || formData.price,
             duration_minutes: formData.duration_minutes,
@@ -478,73 +314,38 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
             priority: formData.priority,
             sort_order: formData.sort_order,
             updated_at: new Date().toISOString(),
-          }).eq("id", pujaId);
-        } catch (e) {
-          console.error("Fallback update to pujas for booking settings also failed:", e);
-        }
-      }
+          },
+          { onConflict: "puja_id" }
+        );
 
-      try {
-        await supabaseAny
-          .from("puja_seo")
-          .upsert(
-            {
-              puja_id: pujaId,
-              seo_title: formData.seo_title || null,
-              seo_description: formData.seo_description || null,
-              seo_keywords: formData.seo_keywords || null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "puja_id" }
-          );
-      } catch (err) {
-        console.warn("puja_seo upsert failed, falling back to updating pujas table:", err);
-        try {
-          await supabaseAny.from("pujas").update({
+      await supabaseAny
+        .from("puja_seo")
+        .upsert(
+          {
+            puja_id: pujaId,
             seo_title: formData.seo_title || null,
             seo_description: formData.seo_description || null,
             seo_keywords: formData.seo_keywords || null,
             updated_at: new Date().toISOString(),
-          }).eq("id", pujaId);
-        } catch (e) {
-          console.error("Fallback update to pujas for seo also failed:", e);
+          },
+          { onConflict: "puja_id" }
+        );
+
+      if (Array.isArray(formData.benefits) && formData.benefits.length > 0) {
+        await supabaseAny.from("puja_benefits").delete().eq("puja_id", pujaId);
+        const benefitsPayload = formData.benefits
+          .map((benefit, index) => ({ puja_id: pujaId, benefit: benefit.trim(), sort_order: index }))
+          .filter((item) => item.benefit);
+        if (benefitsPayload.length > 0) {
+          await supabaseAny.from("puja_benefits").insert(benefitsPayload);
         }
+      } else {
+        await supabaseAny.from("puja_benefits").delete().eq("puja_id", pujaId);
       }
 
-      try {
-        if (Array.isArray(formData.benefits) && formData.benefits.length > 0) {
-          await supabaseAny.from("puja_benefits").delete().eq("puja_id", pujaId);
-          const benefitsPayload = formData.benefits
-            .map((benefit, index) => ({ puja_id: pujaId, benefit: benefit.trim(), sort_order: index }))
-            .filter((item) => item.benefit);
-          if (benefitsPayload.length > 0) {
-            await supabaseAny.from("puja_benefits").insert(benefitsPayload);
-          }
-        } else {
-          await supabaseAny.from("puja_benefits").delete().eq("puja_id", pujaId);
-        }
-      } catch (err) {
-        console.warn("puja_benefits upsert/delete failed, skipping benefits persistence:", err);
-      }
-
-      const normalizedMedia = [...formData.media]
-        .map((item, index) => ({
-          media_type: item.media_type || "image",
-          role: item.role || `image-${index}`,
-          url: item.url,
-          alt_text: item.alt_text || `${formData.name} image`,
-          is_primary: Boolean(item.is_primary),
-          sort_order: item.sort_order ?? index,
-        }))
-        .filter((item) => item.url);
-
-      const matchingImageIndex = normalizedMedia.findIndex((item) => item.url === formData.image_url);
-      if (formData.image_url && matchingImageIndex !== -1) {
-        normalizedMedia[matchingImageIndex].is_primary = true;
-      }
-
-      const hasImageRole = normalizedMedia.some((item) => item.role === "image");
-      if (formData.image_url && matchingImageIndex === -1 && !hasImageRole) {
+      const normalizedMedia = [...formData.media];
+      const imageRoleExists = normalizedMedia.some((item) => item.role === "image" && item.url);
+      if (formData.image_url && !imageRoleExists) {
         normalizedMedia.unshift({
           media_type: "image",
           role: "image",
@@ -555,39 +356,21 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
         });
       }
 
-      let primaryFound = false;
-      normalizedMedia.forEach((item) => {
-        if (item.is_primary) {
-          if (primaryFound) {
-            item.is_primary = false;
-          } else {
-            primaryFound = true;
-          }
-        }
-      });
-      if (!primaryFound && normalizedMedia.length > 0) {
-        normalizedMedia[0].is_primary = true;
-      }
+      await supabaseAny.from("puja_media").delete().eq("puja_id", pujaId);
+      const mediaPayload = normalizedMedia
+        .map((item, index) => ({
+          puja_id: pujaId,
+          media_type: item.media_type || "image",
+          role: item.role,
+          url: item.url,
+          alt_text: item.alt_text || null,
+          is_primary: item.is_primary,
+          sort_order: item.sort_order ?? index,
+        }))
+        .filter((item) => item.role && item.url);
 
-      try {
-        await supabaseAny.from("puja_media").delete().eq("puja_id", pujaId);
-        const mediaPayload = normalizedMedia
-          .map((item, index) => ({
-            puja_id: pujaId,
-            media_type: item.media_type || "image",
-            role: item.role,
-            url: item.url,
-            alt_text: item.alt_text || null,
-            is_primary: item.is_primary,
-            sort_order: item.sort_order ?? index,
-          }))
-          .filter((item) => item.role && item.url);
-
-        if (mediaPayload.length > 0) {
-          await supabaseAny.from("puja_media").insert(mediaPayload);
-        }
-      } catch (err) {
-        console.warn("puja_media update failed, skipping media persistence:", err);
+      if (mediaPayload.length > 0) {
+        await supabaseAny.from("puja_media").insert(mediaPayload);
       }
 
       toast.success(`Puja ${puja ? "updated" : "created"} successfully`);
@@ -616,34 +399,6 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
     setFormData((prev) => ({
       ...prev,
       benefits: prev.benefits.filter((_, idx) => idx !== index),
-    }));
-  };
-
-  const addAdditionalCharge = () => {
-    setFormData((prev) => ({
-      ...prev,
-      additional_charges: [...prev.additional_charges, { label: "", amount: 0 }],
-    }));
-  };
-
-  const updateAdditionalCharge = (index: number, key: "label" | "amount", value: string | number) => {
-    setFormData((prev) => ({
-      ...prev,
-      additional_charges: prev.additional_charges.map((item, idx) =>
-        idx !== index
-          ? item
-          : {
-              ...item,
-              [key]: key === "amount" ? Number(value) : value,
-            }
-      ),
-    }));
-  };
-
-  const removeAdditionalCharge = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      additional_charges: prev.additional_charges.filter((_, idx) => idx !== index),
     }));
   };
 
@@ -963,17 +718,6 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Primary</Label>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={item.is_primary}
-                          onCheckedChange={(value) => updateMediaItem(index, "is_primary", value)}
-                        />
-                        <span className="text-sm text-muted-foreground">Primary media</span>
-                      </div>
-                    </div>
-
                     <div className="space-y-2 flex items-end justify-between md:col-span-1">
                       <Button type="button" variant="outline" onClick={() => removeMediaItem(index)}>
                         Remove
@@ -1109,49 +853,6 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
               value={formData.seo_description}
               onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
             />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Additional Charges</Label>
-              <Button type="button" variant="outline" onClick={addAdditionalCharge}>
-                Add Charge
-              </Button>
-            </div>
-            {formData.additional_charges.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Add optional charge items that users can select during booking.</p>
-            ) : (
-              <div className="space-y-3">
-                {formData.additional_charges.map((item, index) => (
-                  <div key={index} className="grid gap-3 rounded-lg border border-input p-4 md:grid-cols-[1fr_auto]">
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Charge Label</Label>
-                        <Input
-                          value={item.label}
-                          onChange={(e) => updateAdditionalCharge(index, "label", e.target.value)}
-                          placeholder="e.g. Puja Samagri"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Amount (₹)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={item.amount}
-                          onChange={(e) => updateAdditionalCharge(index, "amount", Number(e.target.value))}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-end justify-end">
-                      <Button type="button" variant="outline" onClick={() => removeAdditionalCharge(index)}>
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="space-y-3">

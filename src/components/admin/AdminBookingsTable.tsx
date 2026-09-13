@@ -526,7 +526,9 @@ export const AdminBookingsTable = () => {
                         <div key={item.id}>
                           <CompletionMediaPreview item={item} />
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <Button variant="outline" size="sm" onClick={() => void handleMediaAction(item.id, item.is_hidden ? "show" : "hide")}>{item.is_hidden ? "Show" : "Hide"}</Button>
+                            <Button variant="outline" size="sm" onClick={() => void handleMediaAction(item.id, item.is_hidden ? "show" : "hide")}>
+                              {item.is_hidden ? "Show" : "Hide"}
+                            </Button>
                             <Button variant="destructive" size="sm" onClick={() => void handleMediaAction(item.id, "delete")}>Delete</Button>
                           </div>
                         </div>

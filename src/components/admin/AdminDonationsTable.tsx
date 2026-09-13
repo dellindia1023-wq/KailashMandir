@@ -5,11 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { IndianRupee, TrendingUp, Users, Loader2, Download, Search, RefreshCw } from "lucide-react";
+import { IndianRupee, TrendingUp, Users, Loader2, Download, Search, RefreshCw, CreditCard, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportToCsv } from "@/lib/exportCsv";
+import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Donation {
   id: string;
@@ -34,11 +36,13 @@ interface RevenueByTier {
 }
 
 export const AdminDonationsTable = () => {
+  const { isSuperAdmin } = useUserRole();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [mutatingDonationId, setMutatingDonationId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDonations();
@@ -73,6 +77,51 @@ export const AdminDonationsTable = () => {
       console.error("Error fetching donations:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const markAsPaid = async (donation: Donation) => {
+    if (!window.confirm("Mark this donation as paid?")) return;
+
+    setMutatingDonationId(donation.id);
+    try {
+      const { error } = await supabase
+        .from("donations")
+        .update({ status: "completed" })
+        .eq("id", donation.id)
+        .eq("status", "pending");
+
+      if (error) throw error;
+      await fetchDonations();
+      toast.success("Donation marked as paid");
+    } catch (err) {
+      toast.error(`Failed to mark donation as paid: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setMutatingDonationId(null);
+    }
+  };
+
+  const deleteDonation = async (donation: Donation) => {
+    if (!window.confirm("Delete this donation? This cannot be undone.")) return;
+
+    setMutatingDonationId(donation.id);
+    try {
+      const { data, error } = await supabase
+        .from("donations")
+        .delete()
+        .eq("id", donation.id)
+        .select("id");
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Donation was not deleted. You may not have permission to delete this donation.");
+      }
+      await fetchDonations();
+      toast.success("Donation deleted");
+    } catch (err) {
+      toast.error(`Failed to delete donation: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setMutatingDonationId(null);
     }
   };
 
@@ -250,6 +299,7 @@ export const AdminDonationsTable = () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -274,6 +324,35 @@ export const AdminDonationsTable = () => {
                       month: "short",
                       year: "numeric",
                     })}
+                  </TableCell>
+                  <TableCell>
+                    {(isSuperAdmin || d.status === "pending") && (
+                      <div className="flex flex-wrap gap-2">
+                        {d.status === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => markAsPaid(d)}
+                            disabled={mutatingDonationId !== null}
+                          >
+                            <CreditCard className="h-4 w-4 mr-1" />
+                            Mark as Paid
+                          </Button>
+                        )}
+                        {(isSuperAdmin || d.status === "pending") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteDonation(d)}
+                            disabled={mutatingDonationId !== null}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

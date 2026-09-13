@@ -16,8 +16,16 @@ interface HLSVideoPlayerProps {
 
 const isYouTubeUrl = (url: string): boolean => /(?:youtu\.be\/|youtube\.com\/)/i.test(url);
 const getYouTubeId = (url: string): string | null => {
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|live\/))([a-zA-Z0-9_-]{11})/);
-  return match?.[1] ?? null;
+  try {
+    const parsed = new URL(url);
+    if (!/(^|\.)youtube\.com$|(^|\.)youtu\.be$/i.test(parsed.hostname)) return null;
+    if (parsed.hostname.toLowerCase() === "youtu.be") return parsed.pathname.slice(1).match(/^[a-zA-Z0-9_-]{11}/)?.[0] ?? null;
+    const queryId = parsed.searchParams.get("v");
+    if (queryId) return queryId.match(/^[a-zA-Z0-9_-]{11}/)?.[0] ?? null;
+    return parsed.pathname.match(/\/(?:embed|v|live)\/([a-zA-Z0-9_-]{11})/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
 };
 const isHlsUrl = (url: string): boolean => /\.m3u8(\?|$)/i.test(url);
 const isVideoFileUrl = (url: string): boolean => /\.(mp4|webm|ogg)(\?.*)?$/i.test(url) || url.startsWith("blob:");
@@ -186,6 +194,18 @@ const HLSVideoPlayer = ({
     }
   };
 
+  if (!isLive || !activeStreamUrl) {
+    return (
+      <div ref={containerRef} className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background dark:bg-card flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <WifiOff className="h-10 w-10 mx-auto mb-3" />
+          <p className="font-heading text-xl font-bold">Stream Offline</p>
+          <p className="text-sm mt-1">Live darshan is not available right now.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (resolvedStreamType === "rtsp") {
     return (
       <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background/95 dark:bg-card text-center p-8 flex flex-col items-center justify-center gap-4">
@@ -348,8 +368,8 @@ const HLSVideoPlayer = ({
     );
   }
 
-  if (!isLive || !activeStreamUrl) {
-    const ytId = getYouTubeId(activeStreamUrl || streamUrl);
+  if (resolvedStreamType === "youtube") {
+    const ytId = getYouTubeId(activeStreamUrl);
     return (
       <div ref={containerRef} className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background dark:bg-card">
         {ytId ? (

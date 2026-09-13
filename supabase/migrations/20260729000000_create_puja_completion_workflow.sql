@@ -37,7 +37,7 @@ create table if not exists public.puja_completion_settings (
 );
 
 insert into public.puja_completion_settings (approval_required, updated_at)
-select false, now()
+select true, now()
 where not exists (select 1 from public.puja_completion_settings);
 
 alter table public.puja_completion_records enable row level security;

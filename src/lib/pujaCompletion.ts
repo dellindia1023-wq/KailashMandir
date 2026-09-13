@@ -41,68 +41,45 @@ export interface CompletionSettings {
   updated_at: string;
 }
 
-export const isMissingCompletionTableError = (error: any) => {
+const isMissingCompletionTableError = (error: any) => {
   const message = String(error?.message ?? "");
   const code = String(error?.code ?? "");
 
   return code === "42P01" || code === "PGRST205" || message.includes("does not exist") || message.includes("Could not find the table") || message.includes("not found") || message.includes("doesn't exist");
 };
 
-export const getCompletionWorkflowErrorMessage = (error: any, fallback = "Failed to update completion workflow") => {
-  if (isMissingCompletionTableError(error)) {
-    return "The puja completion workflow tables are missing in Supabase. Run the migration in supabase/migrations/20260729000000_create_puja_completion_workflow.sql, then refresh the page.";
-  }
+export const extractStorageObjectPath = (url: string | null | undefined) => {
+  if (!url) return null;
 
-  return error?.message || fallback;
-};
-
-export const doesCompletionWorkflowExist = async () => {
-  const probeTable = async (tableName: string) => {
-    const { error } = await supabaseAny
-      .from(tableName)
-      .select("id")
-      .limit(1)
-      .maybeSingle() as { error: any };
-
-    if (!error) return true;
-    if (isMissingCompletionTableError(error)) return false;
-    console.warn(`Unable to verify completion workflow table: ${tableName}`, error);
-    return false;
-  };
-
-  const [recordsExist, mediaExist, settingsExist] = await Promise.all([
-    probeTable("puja_completion_records"),
-    probeTable("puja_completion_media"),
-    probeTable("puja_completion_settings"),
-  ]);
-
-  return recordsExist && mediaExist && settingsExist;
-};
-
-export const ensureCompletionWorkflowSchema = async () => {
-  const workflowExists = await doesCompletionWorkflowExist();
-  if (!workflowExists) {
-    throw new Error("The puja completion workflow tables are missing in Supabase. Run the migration in supabase/migrations/20260729000000_create_puja_completion_workflow.sql, then refresh the page.");
+  try {
+    const parsedUrl = new URL(url);
+    const match = parsedUrl.pathname.match(/\/storage\/v1\/object\/public\/content\/(.+)$/);
+    if (!match) return null;
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
   }
 };
 
-export const normalizeDateTimeLocalInput = (value?: string | null) => {
-  if (!value) return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
+const ensureAdminAccess = async () => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error("Admin access required to delete completion media.");
+  }
 
-  const withoutZone = trimmed
-    .replace(/\.\d{3}Z$/, "")
-    .replace(/Z$/, "")
-    .replace(/([+-]\d{2}:?\d{2})$/, "");
+  const { data: appRole, error: roleError } = await supabaseAny
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .maybeSingle() as { data: { role: string } | null; error: any };
 
-  if (!withoutZone.includes("T")) return withoutZone;
+  if (roleError) {
+    throw roleError;
+  }
 
-  const [datePart, timePart] = withoutZone.split("T");
-  if (!datePart || !timePart) return withoutZone;
-
-  const normalizedTime = timePart.replace(/:(\d{2}):00$/, ":$1");
-  return `${datePart}T${normalizedTime}`;
+  if (!appRole || !["admin", "super_admin"].includes(appRole.role)) {
+    throw new Error("Only admins can delete completion media.");
+  }
 };
 
 export const getVisibleCompletionMedia = (media: CompletionMediaItem[]) =>
@@ -129,8 +106,6 @@ export const getCompletionWorkflowSummary = (record: Partial<CompletionRecord> |
 };
 
 export const getCompletionSettings = async () => {
-  await ensureCompletionWorkflowSchema();
-
   const { data, error } = await supabaseAny
     .from("puja_completion_settings")
     .select("id, approval_required, updated_at")
@@ -171,12 +146,10 @@ export const uploadCompletionMedia = async (bookingId: string, file: File, media
   if (uploadError) throw uploadError;
 
   const { data } = supabase.storage.from("content").getPublicUrl(uploadData?.path || fileName);
-  return { url: data.publicUrl, path: uploadData?.path || fileName };
+  return data.publicUrl;
 };
 
 export const fetchCompletionForBooking = async (bookingId: string) => {
-  await ensureCompletionWorkflowSchema();
-
   const { data: recordData, error: recordError } = await supabaseAny
     .from("puja_completion_records")
     .select("*")
@@ -211,8 +184,6 @@ export const fetchCompletionForBooking = async (bookingId: string) => {
 };
 
 export const saveCompletionRecord = async (bookingId: string, payload: Partial<CompletionRecord>) => {
-  await ensureCompletionWorkflowSchema();
-
   const { data: existingRecord, error: existingSelectError } = await supabaseAny
     .from("puja_completion_records")
     .select("id")
@@ -229,12 +200,12 @@ export const saveCompletionRecord = async (bookingId: string, payload: Partial<C
   const recordPayload = {
     booking_id: bookingId,
     completion_notes: payload.completion_notes ?? null,
-    completed_at: payload.completed_at ? payload.completed_at : null,
+    completed_at: payload.completed_at ?? null,
     prasad_dispatch_status: payload.prasad_dispatch_status ?? "pending",
     courier_tracking_number: payload.courier_tracking_number ?? null,
     certificate_url: payload.certificate_url ?? null,
     approval_status: payload.approval_status ?? "draft",
-    approval_required: payload.approval_required ?? false,
+    approval_required: payload.approval_required ?? true,
     admin_notes: payload.admin_notes ?? null,
     approved_at: payload.approved_at ?? null,
     updated_at: new Date().toISOString(),
@@ -263,8 +234,6 @@ export const saveCompletionRecord = async (bookingId: string, payload: Partial<C
 };
 
 export const addCompletionMedia = async (completionId: string, payload: Omit<CompletionMediaItem, "id" | "completion_id" | "created_at" | "updated_at">) => {
-  await ensureCompletionWorkflowSchema();
-
   const { data, error } = await supabaseAny
     .from("puja_completion_media")
     .insert({
@@ -296,7 +265,25 @@ export const updateCompletionMedia = async (mediaId: string, updates: Partial<Co
 };
 
 export const deleteCompletionMedia = async (mediaId: string) => {
-  // Use a relaxed generic to avoid strict DB typings if the table is not present in generated types
+  await ensureAdminAccess();
+
+  const { data: mediaItem, error: fetchError } = await supabaseAny
+    .from("puja_completion_media")
+    .select("id, url")
+    .eq("id", mediaId)
+    .maybeSingle() as { data: { id: string; url: string } | null; error: any };
+
+  if (fetchError) throw fetchError;
+  if (!mediaItem) return;
+
+  const objectPath = extractStorageObjectPath(mediaItem.url);
+  if (objectPath) {
+    const { error: storageError } = await supabase.storage.from("content").remove([objectPath]);
+    if (storageError) {
+      console.warn("Media storage cleanup failed during admin delete. Continuing with DB deletion.", storageError);
+    }
+  }
+
   const { error } = await supabaseAny.from("puja_completion_media").delete().eq("id", mediaId);
   if (error) throw error;
 };

@@ -30,7 +30,6 @@ export interface PujaBookingSettingsRecord {
   recommended?: boolean | null;
   priority?: number | null;
   sort_order?: number | null;
-  additional_charges?: Array<{ label?: string | null; amount?: number | null }> | null;
 }
 
 export interface PujaSeoRecord {
@@ -75,7 +74,6 @@ export interface PujaCmsRecord {
   popular?: boolean | null;
   trending?: boolean | null;
   recommended?: boolean | null;
-  is_active?: boolean | null;
   active?: boolean | null;
   booking_enabled?: boolean | null;
   donation_enabled?: boolean | null;
@@ -129,7 +127,6 @@ export interface NormalizedPuja {
   priority: number;
   sortOrder: number;
   benefits: string[];
-  additionalCharges: Array<{ label: string; amount: number }>;
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
@@ -147,51 +144,18 @@ const getDetailObject = <T>(value: T | T[] | null | undefined): T | null => {
   return Array.isArray(value) ? value[0] ?? null : value;
 };
 
-const getAnyMediaUrl = (row: PujaCmsRecord, fallback = "") => {
-  const media = Array.isArray(row.puja_media) ? row.puja_media : [];
-  const primary = media.find((item) => item?.is_primary && item?.url);
-  if (primary?.url) return primary.url;
-  const first = media.find((item) => item?.url);
-  return first?.url || fallback;
-};
-
 const getMediaUrl = (row: PujaCmsRecord, roles: string[], fallback = "") => {
   const media = Array.isArray(row.puja_media) ? row.puja_media : [];
   for (const role of roles) {
     const entry = media.find((item) => item.role === role && item.url);
     if (entry?.url) return entry.url;
   }
-  return getAnyMediaUrl(row, fallback);
+  return fallback;
 };
 
 const getMediaUrlByRole = (row: PujaCmsRecord, role: string) => {
   const media = Array.isArray(row.puja_media) ? row.puja_media : [];
-  return media.find((item) => item.role === role && item.url)?.url || getAnyMediaUrl(row, "");
-};
-
-export const mergePujaCmsRelations = (
-  row: PujaCmsRecord,
-  relations: Partial<Pick<PujaCmsRecord, "puja_details" | "puja_booking_settings" | "puja_seo" | "puja_media" | "puja_benefits">> = {}
-): PujaCmsRecord => {
-  const merged = { ...row } as PujaCmsRecord;
-
-  if (!merged.puja_details && relations.puja_details) {
-    merged.puja_details = relations.puja_details;
-  }
-  if (!merged.puja_booking_settings && relations.puja_booking_settings) {
-    merged.puja_booking_settings = relations.puja_booking_settings;
-  }
-  if (!merged.puja_seo && relations.puja_seo) {
-    merged.puja_seo = relations.puja_seo;
-  }
-  if (!merged.puja_media && relations.puja_media) {
-    merged.puja_media = relations.puja_media;
-  }
-  if (!merged.puja_benefits && relations.puja_benefits) {
-    merged.puja_benefits = relations.puja_benefits;
-  }
-
-  return merged;
+  return media.find((item) => item.role === role)?.url || "";
 };
 
 export const isPujaVisible = (row: Pick<PujaCmsRecord, "is_active" | "active">) => {
@@ -267,17 +231,6 @@ export const normalizePujaRecord = (row: PujaCmsRecord): NormalizedPuja => {
       ? row.puja_benefits.map((item) => item?.benefit).filter(Boolean) as string[]
       : Array.isArray(row.benefits)
       ? row.benefits.filter(Boolean)
-      : [],
-    additionalCharges: Array.isArray(settings?.additional_charges)
-      ? (settings!.additional_charges as Array<{ label?: string | null; amount?: number | null }>).map((item) => ({
-          label: item?.label || "Additional charge",
-          amount: Number(item?.amount ?? 0),
-        }))
-      : Array.isArray(row.additional_charges)
-      ? (row.additional_charges as Array<{ label?: string | null; amount?: number | null }>).map((item) => ({
-          label: item?.label || "Additional charge",
-          amount: Number(item?.amount ?? 0),
-        }))
       : [],
     seoTitle: seo?.seo_title || "",
     seoDescription: seo?.seo_description || "",

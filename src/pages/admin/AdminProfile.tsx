@@ -28,10 +28,6 @@ const AdminProfile = () => {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
 
-  useEffect(() => {
-    if (user) fetchProfile();
-  }, [user, fetchProfile]);
-
   const fetchProfile = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -42,6 +38,10 @@ const AdminProfile = () => {
     setProfile(data);
     setLoading(false);
   }, [user]);
+
+  useEffect(() => {
+    if (user) fetchProfile();
+  }, [user, fetchProfile]);
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-IN", {

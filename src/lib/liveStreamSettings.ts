@@ -239,8 +239,7 @@ export async function saveLiveStreamSettings(
     return { data, error: null };
   }
 
-  writePersistedLiveStreamSettings({ ...payload });
-  return { data: { ...(payload as LiveStreamSettingsPayload) }, error: null };
+  return { data: null, error: attempt.error };
 }
 
 export interface NormalizedLiveStreamSettings {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPujaCategoryLabel, getPujaImage, isPujaVisible, mergePujaCmsRelations, normalizePujaRecord } from "@/lib/pujaCms";
+import { getPujaCategoryLabel, getPujaImage, isPujaVisible, normalizePujaRecord } from "@/lib/pujaCms";
 
 describe("puja CMS helpers", () => {
   it("normalizes database rows into a UI-friendly structure", () => {
@@ -56,56 +56,6 @@ describe("puja CMS helpers", () => {
 
     expect(getPujaImage(puja, "https://fallback.example.com/fallback.jpg")).toBe("https://cdn.example.com/banner.jpg");
     expect(getPujaCategoryLabel("path")).toBe("Path");
-  });
-
-  it("loads the primary image from puja_media when available", () => {
-    const puja = normalizePujaRecord({
-      id: "puja-3",
-      name: "Shiva Puja",
-      puja_media: [
-        {
-          id: "media-1",
-          url: "https://cdn.example.com/media-banner.jpg",
-          role: "banner",
-          media_type: "image",
-          is_primary: true,
-        },
-      ],
-    });
-
-    expect(getPujaImage(puja, "https://fallback.example.com/fallback.jpg")).toBe("https://cdn.example.com/media-banner.jpg");
-  });
-
-  it("merges related CMS rows into the base puja record for public rendering", () => {
-    const baseRow = { id: "puja-4", name: "Maha Mrityunjaya Jaap", category: "jaap" };
-    const merged = mergePujaCmsRelations(baseRow, {
-      puja_details: [{ subtitle: "Powerful healing mantra", slug: "maha-mrityunjaya-jaap", short_description: "A sacred jaap for protection and healing" }],
-      puja_booking_settings: [{ price: 2500, duration_minutes: 45, booking_enabled: true }],
-      puja_seo: [{ seo_title: "Maha Mrityunjaya Jaap", seo_keywords: "jaap, healing" }],
-      puja_media: [{ role: "banner", url: "https://cdn.example.com/jaap-banner.jpg", is_primary: true }],
-      puja_benefits: [{ benefit: "Healing" }, { benefit: "Protection" }],
-    });
-
-    const puja = normalizePujaRecord(merged as any);
-
-    expect(puja.subtitle).toBe("Powerful healing mantra");
-    expect(puja.price).toBe(2500);
-    expect(puja.seoTitle).toBe("Maha Mrityunjaya Jaap");
-    expect(puja.benefits).toEqual(["Healing", "Protection"]);
-    expect(puja.imageUrl).toBe("https://cdn.example.com/jaap-banner.jpg");
-  });
-
-  it("loads optional additional charges from booking settings", () => {
-    const puja = normalizePujaRecord({
-      id: "puja-5",
-      name: "Shiva Abhishek",
-      puja_booking_settings: [{ price: 1500, additional_charges: [{ label: "Puja Samagri", amount: 500 }, { label: "Extra Aarti", amount: 300 }] }],
-    } as any);
-
-    expect(puja.additionalCharges).toEqual([
-      { label: "Puja Samagri", amount: 500 },
-      { label: "Extra Aarti", amount: 300 },
-    ]);
   });
 
   it("treats legacy active flags as visible for public puja listings", () => {

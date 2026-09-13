@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import PriestCompletionPanel from "@/components/priest/PriestCompletionPanel";
-import { fetchCompletionForBooking, getCompletionWorkflowErrorMessage } from "@/lib/pujaCompletion";
+import { fetchCompletionForBooking } from "@/lib/pujaCompletion";
 import {
   Loader2, Calendar, Clock, User,
   CheckCircle2, Circle, RefreshCw, BookOpen, AlertCircle
@@ -92,7 +92,7 @@ const PriestDashboard = () => {
       toast.success("Status updated");
     } catch (error) {
       console.error("Error:", error);
-      toast.error(getCompletionWorkflowErrorMessage(error, "Failed to update status"));
+      toast.error("Failed to update status");
     } finally {
       setUpdatingStatus(null);
     }

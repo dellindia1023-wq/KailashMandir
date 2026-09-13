@@ -30,6 +30,7 @@ const Auth = () => {
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "facebook" | null>(null);
   
   // PIN/Biometric state
   const [showPinUnlock, setShowPinUnlock] = useState(false);
@@ -130,6 +131,21 @@ const Auth = () => {
       }
     } else {
       toast.success("Account created successfully! Welcome to Kailash Mahadev Temple 🙏");
+    }
+  };
+
+  const handleOAuthSignIn = async (provider: "google" | "facebook") => {
+    setOauthLoading(provider);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (error) {
+      setOauthLoading(null);
+      toast.error(`${provider === "google" ? "Google" : "Facebook"} sign-in is unavailable. Please try again or use email and password.`);
     }
   };
 
@@ -254,6 +270,30 @@ const Auth = () => {
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
 
+                  <div className="relative py-1">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or continue with</span></div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleOAuthSignIn("google")}
+                      disabled={loading || oauthLoading !== null}
+                    >
+                      {oauthLoading === "google" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with Google"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleOAuthSignIn("facebook")}
+                      disabled={loading || oauthLoading !== null}
+                    >
+                      {oauthLoading === "facebook" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with Facebook"}
+                    </Button>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => { setForgotMode(true); setForgotEmail(email); }}
@@ -376,6 +416,30 @@ const Auth = () => {
                   >
                     {loading ? "Creating account..." : "Create Account"}
                   </Button>
+
+                  <div className="relative py-1">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or continue with</span></div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleOAuthSignIn("google")}
+                      disabled={loading || oauthLoading !== null}
+                    >
+                      {oauthLoading === "google" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with Google"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleOAuthSignIn("facebook")}
+                      disabled={loading || oauthLoading !== null}
+                    >
+                      {oauthLoading === "facebook" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with Facebook"}
+                    </Button>
+                  </div>
                   
                   <p className="text-xs text-center text-muted-foreground">
                     By signing up, you agree to receive temple updates and newsletters
@@ -399,3 +463,4 @@ const Auth = () => {
 };
 
 export default Auth;
+                                                                                                                                                                                                                                                             

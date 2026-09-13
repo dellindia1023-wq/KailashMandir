@@ -1,0 +1,2 @@
+-- Placeholder migration to match remote Supabase migration history.
+-- This version already exists in the remote project and is intentionally left as a no-op.

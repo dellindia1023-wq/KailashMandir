@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Video, Users, Wifi, Clock, Share2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,7 +47,6 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
   const [copied, setCopied] = useState(false);
   const [scheduleSlots, setScheduleSlots] = useState<DarshanScheduleSlot[]>([]);
   const [scheduleStatus, setScheduleStatus] = useState<DarshanWindowStatus | null>(null);
-  const [sources, setSources] = useState<any[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,20 +77,6 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
           manual_override: normalized.manualOverride,
           manual_live: normalized.manualLive,
         });
-      }
-    };
-
-    const fetchSources = async () => {
-      const { data, error } = await supabase
-        .from("live_stream_sources")
-        .select("id, name, stream_url, backup_stream_url, source_type, current_status, is_primary, description, priority")
-        .eq("is_active", true)
-        .order("priority", { ascending: true })
-        .order("created_at", { ascending: true });
-
-      if (!isMounted) return;
-      if (!error) {
-        setSources((data || []) as any[]);
       }
     };
 
@@ -127,7 +112,6 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
     };
 
     fetchSettings();
-    fetchSources();
     fetchSchedule();
     syncScheduleStatus();
     const intervalId = window.setInterval(syncScheduleStatus, 60_000);
@@ -181,46 +165,11 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
 
   const displayIsLive = resolvedLiveState.isLive;
 
-  const activeSource = useMemo(() => {
-    const primary = sources.find((item) => item.is_primary) || sources[0];
-    return primary || null;
-  }, [sources]);
-
-  const effectiveStreamUrl = useMemo(() => {
-    return activeSource?.stream_url?.trim() || settings.stream_url;
-  }, [activeSource?.stream_url, settings.stream_url]);
-
-  const effectiveBackupStreamUrl = useMemo(() => {
-    return activeSource?.backup_stream_url?.trim() || settings.backup_stream_url;
-  }, [activeSource?.backup_stream_url, settings.backup_stream_url]);
-
-  const effectiveTitle = useMemo(() => {
-    return activeSource?.name || settings.title;
-  }, [activeSource?.name, settings.title]);
-
-  const effectiveDescription = useMemo(() => {
-    return activeSource?.description || settings.description;
-  }, [activeSource?.description, settings.description]);
-
-  const isYouTubeUrl = (url: string) => /(?:youtu\.be\/|youtube\.com\/)/i.test(url);
-  const isHlsUrl = (url: string) => /\.m3u8(\?|$)/i.test(url);
-  const isUploadUrl = (url: string) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(url);
-
-  const effectiveStreamType = useMemo<LiveStreamType>(() => {
-    const sourceType = activeSource?.source_type as LiveStreamType | undefined;
-    const resolvedSourceType = ["hls", "youtube", "upload", "mobile", "rtmp", "rtsp", "webrtc"].includes(sourceType || "")
-      ? (sourceType as LiveStreamType)
-      : settings.stream_type;
-
-    if (resolvedSourceType === "rtsp" && effectiveBackupStreamUrl) {
-      if (isYouTubeUrl(effectiveBackupStreamUrl)) return "youtube";
-      if (isHlsUrl(effectiveBackupStreamUrl)) return "hls";
-      if (isUploadUrl(effectiveBackupStreamUrl)) return "upload";
-      return settings.stream_type;
-    }
-
-    return resolvedSourceType;
-  }, [activeSource?.source_type, settings.stream_type, effectiveBackupStreamUrl]);
+  const effectiveStreamUrl = settings.stream_url;
+  const effectiveBackupStreamUrl = settings.backup_stream_url;
+  const effectiveTitle = settings.title;
+  const effectiveDescription = settings.description;
+  const effectiveStreamType = settings.stream_type;
 
   const statusDescription = displayIsLive
     ? settings.manual_override
@@ -263,7 +212,7 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="rounded-2xl bg-gold/10 dark:bg-slate-800/50 px-6 py-3 text-sm border border-gold/30 dark:border-gold/40 shadow-md">
                   <p className="text-xs uppercase tracking-[0.25em] text-gold/80 font-bold">{t("liveDarshan.streamType")}</p>
-                  <p className="mt-1 font-bold text-gold text-base">{settings.stream_type.toUpperCase()}</p>
+                  <p className="mt-1 font-bold text-gold text-base">{effectiveStreamType.toUpperCase()}</p>
                 </div>
                 <div className="rounded-2xl bg-saffron/10 dark:bg-slate-800/50 px-6 py-3 text-sm border border-saffron/30 dark:border-saffron/40 shadow-md">
                   <p className="text-xs uppercase tracking-[0.25em] text-saffron/80 font-bold">{t("liveDarshan.viewerCount")}</p>
@@ -287,26 +236,6 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
                   <p className="font-semibold">Live darshan unavailable</p>
                   <p className="mt-1 text-sm">{loadError} Please refresh the page or check your stream configuration.</p>
                 </div>
-              ) : (
-                <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm text-gray-700 dark:text-gray-300">
-                  <div className="rounded-2xl bg-white/10 dark:bg-slate-800/60 p-4 border border-white/10">
-                    <p className="font-semibold">Primary source</p>
-                    <p className="mt-1">{activeSource?.name || settings.source_name || "Primary Camera"}</p>
-                  </div>
-                <div className="rounded-2xl bg-white/10 dark:bg-slate-800/60 p-4 border border-white/10">
-                  <p className="font-semibold">Backup source</p>
-                  <p className="mt-1">{effectiveBackupStreamUrl ? "Configured" : "Not configured"}</p>
-                </div>
-                <div className="rounded-2xl bg-white/10 dark:bg-slate-800/60 p-4 border border-white/10">
-                  <p className="font-semibold">Stream mode</p>
-                  <p className="mt-1 uppercase">{settings.stream_type}</p>
-                </div>
-              </div>
-              )}
-              {settings.source_notes ? (
-                <p className="mt-4 text-sm text-gray-800 dark:text-gray-200 max-w-3xl leading-relaxed">
-                  {settings.source_notes}
-                </p>
               ) : null}
             </div>
 
