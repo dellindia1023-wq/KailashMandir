@@ -207,15 +207,19 @@ const AdminSettings = () => {
       rtmpUrl,
       rtmpStreamKey,
     });
+    const hasMobilePublishEndpoint = Boolean(endpoints.whipPublishUrl);
+    const nextIsLive = streamType === "mobile" && !hasMobilePublishEndpoint ? false : isLive;
     const nextStreamUrl = streamType === "youtube" ? streamUrl : endpoints.hlsUrl || streamUrl;
     const diagnostics = validateHlsStream(nextStreamUrl);
     const nextStreamStatus = diagnostics.isValid ? "ready" : "degraded";
-    const nextHealthSummary = diagnostics.summary;
+    const nextHealthSummary = streamType === "mobile" && !hasMobilePublishEndpoint
+      ? "Mobile preview is available, but a MediaMTX server URL and path are required for public publishing."
+      : diagnostics.summary;
 
     const payload = {
       stream_url: nextStreamUrl,
       stream_type: streamType,
-      is_live: isLive,
+      is_live: nextIsLive,
       title,
       description,
       viewer_count: viewerCount,
@@ -223,7 +227,7 @@ const AdminSettings = () => {
       backup_stream_url: backupStreamUrl,
       source_notes: sourceNotes,
       manual_override: manualOverride,
-      manual_live: manualLive,
+      manual_live: streamType === "mobile" && !hasMobilePublishEndpoint ? false : manualLive,
       media_server_url: mediaServerUrl,
       media_server_path: mediaServerPath,
       rtmp_url: rtmpUrl,
@@ -244,6 +248,11 @@ const AdminSettings = () => {
       toast.error("Failed to save settings: " + (error?.message || "Unable to save settings"));
     } else {
       setSettingsId((saved as any).id || settingsId);
+      setIsLive(nextIsLive);
+      if (streamType === "mobile" && !hasMobilePublishEndpoint) {
+        setManualLive(false);
+        setMobilePublishError("Camera preview is ready. Configure a MediaMTX server URL and path before publishing publicly.");
+      }
       setStreamStatus(nextStreamStatus);
       setHealthSummary(nextHealthSummary);
       const message = settingsId ? "Live stream settings updated!" : "Live stream settings created!";
@@ -254,6 +263,19 @@ const AdminSettings = () => {
   };
 
   const handleToggleLive = async (checked: boolean) => {
+    if (checked && streamType === "mobile") {
+      const endpoints = buildLiveStreamEndpoints({
+        mediaServerUrl,
+        mediaServerPath,
+        rtmpUrl,
+        rtmpStreamKey,
+      });
+      if (!endpoints.whipPublishUrl) {
+        toast.error("Configure a MediaMTX server URL and path before going live with Mobile Camera.");
+        return;
+      }
+    }
+
     const nextManualOverride = true;
     const nextManualLive = checked;
     setIsLive(checked);
@@ -312,6 +334,10 @@ const AdminSettings = () => {
         throw new Error("This browser does not support camera publishing.");
       }
 
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+      setCameraStream(stream);
+      setCameraPermission("granted");
+
       const endpoints = buildLiveStreamEndpoints({
         mediaServerUrl,
         mediaServerPath,
@@ -319,10 +345,12 @@ const AdminSettings = () => {
         rtmpStreamKey,
       });
       if (!endpoints.whipPublishUrl) {
-        throw new Error("Set a MediaMTX server URL and path before starting the mobile publish.");
+        setMobilePublishStatus("idle");
+        setMobilePublishError("Camera preview is active. Configure a MediaMTX server URL and path to publish publicly.");
+        setHealthSummary("Camera preview ready; MediaMTX/WHIP configuration is required for public publishing.");
+        return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
       const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
       peerConnectionRef.current = pc;
       mobilePublishStreamRef.current = stream;
@@ -347,8 +375,6 @@ const AdminSettings = () => {
       const answerSdp = await response.text();
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
-      setCameraStream(stream);
-      setCameraPermission("granted");
       setMobilePublishStatus("published");
       setStreamStatus("publishing");
       setHealthSummary(`Publishing to ${endpoints.whipPublishUrl}`);
@@ -496,6 +522,9 @@ const AdminSettings = () => {
               </div>
               {cameraPermission === "denied" && (
                 <p className="text-xs text-destructive">Camera permission denied. Please allow access from your browser settings.</p>
+              )}
+              {mobilePublishError && (
+                <p className="text-xs text-amber-700 dark:text-amber-300">{mobilePublishError}</p>
               )}
               {cameraStream && (
                 <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
@@ -713,8 +742,8 @@ const AdminSettings = () => {
             <div className="text-sm text-muted-foreground">
               <p className="font-medium text-foreground">Upcoming slots today</p>
               <ul className="mt-2 space-y-1">
-                {scheduleSlots.slice(0, 3).map((slot) => (
-                  <li key={`${slot.start_time}-${slot.end_time}`} className="flex items-center justify-between rounded-md border bg-background/70 px-3 py-2">
+                {scheduleSlots.slice(0, 3).map((slot, index) => (
+                  <li key={`${slot.day_of_week}-${slot.start_time}-${slot.end_time}-${slot.label || "darshan"}-${index}`} className="flex items-center justify-between rounded-md border bg-background/70 px-3 py-2">
                     <span>{slot.label || "Darshan"}</span>
                     <span className="font-mono text-xs">{formatScheduleTime(slot.start_time)}–{formatScheduleTime(slot.end_time)}</span>
                   </li>

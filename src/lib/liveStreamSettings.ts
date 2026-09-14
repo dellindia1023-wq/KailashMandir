@@ -100,11 +100,13 @@ const LIVE_STREAM_SETTINGS_MINIMAL_COLUMNS = [
   "stream_type",
 ].join(", ");
 
+let useMinimalLiveStreamSettingsColumns = false;
+
 const isInvalidColumnError = (error: any): boolean => {
   if (!error) return false;
   if (error.code === "42703") return true;
   if (typeof error.message === "string") {
-    return /column .* does not exist|invalid input syntax|bad request/i.test(error.message);
+    return /column .* does not exist|could not find the .* column|schema cache|invalid input syntax|bad request/i.test(error.message);
   }
   return false;
 };
@@ -129,6 +131,7 @@ export async function fetchLiveStreamSettings(): Promise<{
     }
 
     if (isInvalidColumnError(firstAttempt.error)) {
+      useMinimalLiveStreamSettingsColumns = true;
       const fallback = await supabase
         .from("live_stream_settings")
         .select(LIVE_STREAM_SETTINGS_MINIMAL_COLUMNS)
@@ -216,7 +219,7 @@ export async function saveLiveStreamSettings(
       .maybeSingle();
   };
 
-  const attempt = await performQuery(fullPayload);
+  const attempt = await performQuery(useMinimalLiveStreamSettingsColumns ? minimalPayload : fullPayload);
   if (!attempt.error) {
     const data = attempt.data as LiveStreamSettingsPayload | null;
     if (data) {
@@ -226,6 +229,7 @@ export async function saveLiveStreamSettings(
   }
 
   if (isInvalidColumnError(attempt.error)) {
+    useMinimalLiveStreamSettingsColumns = true;
     const fallback = await performQuery(minimalPayload);
     if (fallback.error) {
       writePersistedLiveStreamSettings({ ...payload });
