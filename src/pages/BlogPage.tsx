@@ -14,7 +14,7 @@ import useScrollReveal from "@/hooks/useScrollReveal";
 import { Loader2, Search, Calendar, Clock3, BookOpen, Sparkles, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import templeHero from "@/assets/gallery/devotees-prayer.jpg";
+import shivlingMala from "@/assets/gallery/shivling-mala.jpg";
 import { BASE_URL } from "@/constants/seo";
 
 export default function BlogPage() {
@@ -92,11 +92,16 @@ export default function BlogPage() {
       />
       <Header />
       <PageHeroBanner
-        image={templeHero}
-        title="Blog"
-        highlight="& Insights"
-        subtitle="Explore spiritual wisdom and temple news from Kailash Mahadev Temple, Agra"
-        mantra="ॐ नमः शिवाय"
+        image={shivlingMala}
+        title="Spiritual"
+        highlight="Blog & Insights"
+        subtitle="Explore profound Shiva wisdom, temple rituals, and sacred spiritual teachings."
+        mantra="ज्ञान एवं भक्ति"
+        badge={
+          <Badge className="bg-primary/20 text-gold-light border-gold/30 text-xs px-3 py-1 font-medium">
+            आध्यात्मिक लेख · Spiritual Articles
+          </Badge>
+        }
       />
 
       <main>

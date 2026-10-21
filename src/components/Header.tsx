@@ -22,15 +22,15 @@ const Header = () => {
     { name: t("nav.home"), href: "/", isRoute: true },
     { name: t("nav.about"), href: "/about", isRoute: true },
     { name: t("nav.contact"), href: "/contact", isRoute: true },
-    { name: t("nav.pujas"), href: "/pujas", isRoute: 
-      true },
+    { name: t("nav.pujas"), href: "/pujas", isRoute: true },
     { name: t("nav.donate"), href: "/donate", isRoute: true },
-    { name: t("Live Darshan"),href: "/live-darshan", isRoute: true },
+    { name: t("liveDarshan.title") || "Live Darshan", href: "/live-darshan", isRoute: true },
   ];
 
   const mobileNavLinks = [
     { name: t("nav.home"), href: "/", isRoute: true },
     { name: t("nav.about"), href: "/about", isRoute: true },
+    { name: t("liveDarshan.title") || "Live Darshan", href: "/live-darshan", isRoute: true },
     { name: t("nav.darshan"), href: "/darshan-timings", isRoute: true },
     { name: t("nav.events"), href: "/events", isRoute: true },
     { name: t("nav.gallery"), href: "/gallery", isRoute: true },
@@ -39,6 +39,11 @@ const Header = () => {
     { name: t("nav.contact"), href: "/contact", isRoute: true },
     { name: t("nav.pujas"), href: "/pujas", isRoute: true },
   ];
+
+  const isLinkActive = (href: string) => {
+    if (href === "/") return location.pathname === "/";
+    return location.pathname === href || location.pathname.startsWith(`${href}/`);
+  };
 
   const accountHref = useMemo(() => {
     switch (role) {
@@ -93,17 +98,26 @@ const Header = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-4 min-w-0 overflow-x-auto scrollbar-hide px-4 py-2 rounded-full bg-background/70 border border-primary/10 shadow-sm backdrop-blur-md">
-            {desktopNavLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="whitespace-nowrap text-sm font-medium text-foreground/85 hover:text-primary transition-colors relative group"
-              >
-                {link.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 rounded-full bg-primary transition-all group-hover:w-full" />
-              </Link>
-            ))}
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-2 xl:gap-3 min-w-0 overflow-x-auto scrollbar-hide px-4 py-1.5 rounded-full bg-background/80 border border-primary/15 shadow-sm backdrop-blur-md">
+            {desktopNavLinks.map((link) => {
+              const active = isLinkActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={`whitespace-nowrap text-sm font-medium transition-all relative py-1 px-2 rounded-full ${
+                    active
+                      ? "text-primary font-semibold bg-primary/10"
+                      : "text-foreground/80 hover:text-primary hover:bg-primary/5"
+                  }`}
+                >
+                  {link.name}
+                  {active && (
+                    <span className="absolute -bottom-1 left-3 right-3 h-0.5 rounded-full bg-gradient-to-r from-gold via-primary to-gold shadow-sm" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
@@ -190,17 +204,25 @@ const Header = () => {
                     </div>
                   </div>
                   
-                  <nav className="flex flex-col gap-2">
-                    {mobileNavLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        to={link.href}
-                        onClick={() => setIsOpen(false)}
-                        className="py-2 px-4 rounded-lg text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                      >
-                        {link.name}
-                      </Link>
-                    ))}
+                  <nav className="flex flex-col gap-1.5">
+                    {mobileNavLinks.map((link) => {
+                      const active = isLinkActive(link.href);
+                      return (
+                        <Link
+                          key={link.href}
+                          to={link.href}
+                          onClick={() => setIsOpen(false)}
+                          className={`py-2.5 px-4 rounded-xl text-sm transition-colors flex items-center justify-between ${
+                            active
+                              ? "bg-primary/10 text-primary font-semibold border-l-4 border-primary"
+                              : "text-foreground hover:bg-muted hover:text-primary"
+                          }`}
+                        >
+                          <span>{link.name}</span>
+                          {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+                        </Link>
+                      );
+                    })}
                   </nav>
 
                   <div className="mt-auto pt-6 border-t border-border space-y-3">

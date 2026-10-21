@@ -5,7 +5,7 @@ import DarshanTimings from "@/components/DarshanTimings";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import TempleDivider from "@/components/TempleDivider";
 import useScrollReveal from "@/hooks/useScrollReveal";
-import templeHero from "@/assets/gallery/devotees-prayer.jpg";
+import sanctumOverview from "@/assets/gallery/sanctum-overview.jpg";
 import aartiImg from "@/assets/gallery/shivling-shringar-1.jpg";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,12 +59,16 @@ const DarshanTimingsPage = () => {
       <Header />
       <main>
         <PageHeroBanner
-          image={templeHero}
-          title="Darshan"
+          image={sanctumOverview}
+          title="Darshan & Aarti"
           highlight="Timings"
-          subtitle="Plan your visit with our daily darshan and aarti schedule."
-          mantra="ॐ नमः शिवाय"
-          badge={<Badge className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30">Daily Schedule</Badge>}
+          subtitle="Plan your sacred visit with daily darshan and morning-evening aarti schedule."
+          mantra="मंगल आरती · संध्या दर्शन"
+          badge={
+            <Badge className="bg-primary/20 text-gold-light border-gold/30 text-xs px-3 py-1 font-medium">
+              दैनिक दर्शन समय · Daily Schedule
+            </Badge>
+          }
         />
 
         <TempleDivider />

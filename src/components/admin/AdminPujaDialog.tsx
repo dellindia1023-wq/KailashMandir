@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { normalizeSlug } from "@/lib/pujaCms";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+import { normalizeSlug, parseAdditionalCharges, type PujaSamagriItem } from "@/lib/pujaCms";
 
 interface PujaCategory {
   id: string;
@@ -90,6 +90,7 @@ const defaultFormState = {
   is_active: true,
   benefits: [] as string[],
   media: [] as PujaMediaItem[],
+  additional_charges: [] as PujaSamagriItem[],
 };
 
 export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPujaDialogProps) => {
@@ -116,6 +117,7 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
       const benefits = Array.isArray(puja.puja_benefits)
         ? puja.puja_benefits.map((item) => item?.benefit).filter(Boolean) as string[]
         : [];
+      const additional_charges = parseAdditionalCharges(settings.additional_charges);
       const media = Array.isArray(puja.puja_media)
         ? puja.puja_media
             .filter((item) => item?.url)
@@ -163,6 +165,7 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
         is_active: puja.is_active ?? puja.active ?? true,
         benefits,
         media,
+        additional_charges,
       });
     } else {
       setFormData({ ...defaultFormState });
@@ -313,6 +316,14 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
             recommended: formData.recommended,
             priority: formData.priority,
             sort_order: formData.sort_order,
+            additional_charges: formData.additional_charges
+              .filter((item) => item.label.trim().length > 0)
+              .map((item) => ({
+                label: item.label.trim(),
+                amount: Math.max(0, Number(item.amount || 0)),
+                description: item.description?.trim() || undefined,
+                included: Boolean(item.included),
+              })),
             updated_at: new Date().toISOString(),
           },
           { onConflict: "puja_id" }
@@ -399,6 +410,32 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
     setFormData((prev) => ({
       ...prev,
       benefits: prev.benefits.filter((_, idx) => idx !== index),
+    }));
+  };
+
+  const addSamagriItem = () => {
+    setFormData((prev) => ({
+      ...prev,
+      additional_charges: [
+        ...prev.additional_charges,
+        { label: "", amount: 0, description: "", included: false },
+      ],
+    }));
+  };
+
+  const updateSamagriItem = (index: number, field: keyof PujaSamagriItem, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      additional_charges: prev.additional_charges.map((item, idx) =>
+        idx === index ? { ...item, [field]: value } : item
+      ),
+    }));
+  };
+
+  const removeSamagriItem = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      additional_charges: prev.additional_charges.filter((_, idx) => idx !== index),
     }));
   };
 
@@ -853,6 +890,81 @@ export const AdminPujaDialog = ({ open, onOpenChange, puja, onSuccess }: AdminPu
               value={formData.seo_description}
               onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
             />
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-semibold">Puja Samagri & Offerings (Add-ons)</Label>
+                <p className="text-xs text-muted-foreground">Configure optional or included samagri kits and ritual offerings.</p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addSamagriItem}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Samagri
+              </Button>
+            </div>
+            {formData.additional_charges.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No samagri add-ons configured for this puja yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {formData.additional_charges.map((item, index) => (
+                  <div key={index} className="grid gap-3 rounded-lg border border-border/50 bg-background p-3.5">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Samagri / Offering Name *</Label>
+                        <Input
+                          value={item.label}
+                          onChange={(e) => updateSamagriItem(index, "label", e.target.value)}
+                          placeholder="e.g. Complete Puja Samagri Kit"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Extra Price (₹)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={item.amount}
+                            onChange={(e) => updateSamagriItem(index, "amount", Number(e.target.value))}
+                            disabled={item.included}
+                          />
+                        </div>
+                        <div className="space-y-1.5 flex flex-col justify-end">
+                          <div className="flex items-center justify-between gap-1 h-10 px-2 rounded-md border border-input">
+                            <span className="text-xs font-medium">Included</span>
+                            <Switch
+                              checked={Boolean(item.included)}
+                              onCheckedChange={(checked) => {
+                                updateSamagriItem(index, "included", checked);
+                                if (checked) updateSamagriItem(index, "amount", 0);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        value={item.description || ""}
+                        onChange={(e) => updateSamagriItem(index, "description", e.target.value)}
+                        placeholder="Inclusions summary (e.g. Belpatra, Janeu, Gangajal, Prasad)"
+                        className="text-xs"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSamagriItem(index)}
+                        className="text-destructive hover:bg-destructive/10 shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">

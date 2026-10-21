@@ -33,7 +33,7 @@ interface Puja {
   durationMinutes?: number;
   duration_minutes?: number;
   category?: string;
-  additionalCharges?: Array<{ label: string; amount: number }>;
+  additionalCharges?: Array<{ label: string; amount: number; description?: string; included?: boolean }>;
 }
 
 interface PujaBookingDialogProps {
@@ -112,8 +112,8 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
       const selectedAdditionalCharges = puja.additionalCharges?.map((item, index) => ({
         ...item,
         selected: Boolean(selectedChargeStates[index]),
-      }))?.filter((item) => item.selected).map(({ selected, ...charge }) => charge) || [];
-      const finalAmount = puja.price + selectedAdditionalCharges.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      }))?.filter((item) => item.selected && !item.included && item.amount > 0).map(({ selected, ...charge }) => charge) || [];
+      const finalAmount = Math.max(0, Number(puja.price || 0)) + selectedAdditionalCharges.reduce((sum, item) => sum + Math.max(0, Number(item.amount || 0)), 0);
 
       const { data: orderData, error: orderError } = await supabase.functions.invoke(
         "create-razorpay-order",
@@ -149,8 +149,8 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
             const selectedAdditionalCharges = puja.additionalCharges?.map((item, index) => ({
               ...item,
               selected: Boolean(selectedChargeStates[index]),
-            }))?.filter((item) => item.selected).map(({ selected, ...charge }) => charge) || [];
-            const finalAmount = puja.price + selectedAdditionalCharges.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+            }))?.filter((item) => item.selected && !item.included && item.amount > 0).map(({ selected, ...charge }) => charge) || [];
+            const finalAmount = Math.max(0, Number(puja.price || 0)) + selectedAdditionalCharges.reduce((sum, item) => sum + Math.max(0, Number(item.amount || 0)), 0);
 
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
               "verify-razorpay-payment",
@@ -226,9 +226,9 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const selectedAdditionalCharges = puja.additionalCharges?.filter((_, index) => selectedChargeStates[index]) || [];
-  const additionalTotal = selectedAdditionalCharges.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const finalAmount = puja.price + additionalTotal;
+  const selectedAdditionalCharges = puja.additionalCharges?.filter((item, index) => selectedChargeStates[index] && !item.included && item.amount > 0) || [];
+  const additionalTotal = selectedAdditionalCharges.reduce((sum, item) => sum + Math.max(0, Number(item.amount || 0)), 0);
+  const finalAmount = Math.max(0, Number(puja.price || 0)) + additionalTotal;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -252,7 +252,7 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
                 <p className="font-medium">{puja.durationMinutes ?? puja.duration_minutes ?? 60} minutes</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Base Amount</p>
+                <p className="text-sm text-muted-foreground">Base Offering</p>
                 <p className="font-heading text-xl font-bold text-primary">
                   ₹{puja.price.toLocaleString("en-IN")}
                 </p>
@@ -260,11 +260,11 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
             </div>
             {puja.additionalCharges?.length ? (
               <div className="rounded-xl border border-border/60 bg-background p-4 space-y-3">
-                <p className="text-sm font-semibold">Optional Add-on Charges</p>
+                <p className="text-sm font-semibold">Optional Puja Samagri & Offerings</p>
                 <div className="space-y-2">
                   {puja.additionalCharges.map((item, index) => (
-                    <label key={`${item.label}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 px-3 py-3">
-                      <div className="flex items-center gap-3">
+                    <label key={`${item.label}-${index}`} className="flex items-start justify-between gap-3 rounded-lg border border-border/40 p-3 hover:bg-muted/30 transition-colors cursor-pointer">
+                      <div className="flex items-start gap-3">
                         <Checkbox
                           checked={Boolean(selectedChargeStates[index])}
                           onCheckedChange={(checked) =>
@@ -273,10 +273,16 @@ export const PujaBookingDialog = ({ puja, open, onOpenChange }: PujaBookingDialo
                               [index]: Boolean(checked),
                             }))
                           }
+                          className="mt-0.5"
                         />
                         <div>
-                          <p className="font-medium">{item.label}</p>
-                          <p className="text-sm text-muted-foreground">₹{Number(item.amount || 0).toLocaleString("en-IN")}</p>
+                          <p className="font-medium text-sm text-foreground">{item.label}</p>
+                          {item.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                          )}
+                          <p className="text-xs font-semibold text-primary mt-1">
+                            {item.included || item.amount === 0 ? "Included in Puja" : `+₹${Number(item.amount || 0).toLocaleString("en-IN")}`}
+                          </p>
                         </div>
                       </div>
                     </label>

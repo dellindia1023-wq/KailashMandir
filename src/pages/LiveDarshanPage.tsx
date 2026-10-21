@@ -6,6 +6,8 @@ import LiveDarshan from "@/components/LiveDarshan";
 import useScrollReveal from "@/hooks/useScrollReveal";
 import shivaLingam from "@/assets/gallery/shivling-chandan.jpg";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -44,22 +46,15 @@ const LiveDarshanPage = () => {
       />
       <Header />
       <main>
-        {/* Header Section */}
-        <section className="py-12 md:py-20 bg-muted temple-pattern overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
-          <div className="container mx-auto px-4 relative z-10 text-center">
-            <p className="text-gold font-heading text-sm md:text-lg mb-3 tracking-wider uppercase">हर हर महादेव</p>
-            <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground mb-4">
-              <span className="text-gradient-sacred">Live Darshan</span>
-            </h1>
-            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto mb-3">
-              24/7 Divine Stream from Kailash Mahadev Temple
-            </p>
-            <p className="text-sm md:text-base text-muted-foreground max-w-3xl mx-auto">
-              Join thousands of devotees worldwide as they experience the sacred rituals and divine presence of Lord Shiva in real-time. Our live darshan brings the temple sanctum directly to your home.
-            </p>
-          </div>
-        </section>
+        {/* Consistent Sacred Page Header */}
+        <PageHeroBanner
+          image={shivaLingam}
+          title="Live"
+          highlight="Darshan"
+          subtitle="24/7 Divine Stream from Kailash Mahadev Temple Agra"
+          mantra="हर हर महादेव"
+          badge={<Badge className="bg-red-500/20 text-red-500 dark:text-red-400 border-red-500/30 text-xs px-3 py-1">24/7 Live Stream</Badge>}
+        />
 
         {/* Live Player Section */}
         <section ref={revealContent.ref} className={`py-10 md:py-16 bg-background ${revealContent.className}`}>

@@ -57,7 +57,12 @@ const ContactPage = () => {
           title={t("contactPage.pageTitle")}
           highlight={t("contactPage.pageTitleHighlight")}
           subtitle={t("contactPage.pageSubtitle")}
-          mantra="ॐ नमः शिवाय"
+          mantra="तीर्थ दर्शन एवं संपर्क"
+          badge={
+            <Badge className="bg-primary/20 text-gold-light border-gold/30 text-xs px-3 py-1 font-medium">
+              यमुना तट, सिकंदरा आगरा · Sikandra Agra
+            </Badge>
+          }
         />
 
         {/* Contact Section */}

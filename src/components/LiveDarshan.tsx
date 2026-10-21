@@ -100,21 +100,13 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
       setScheduleStatus(getDarshanWindowStatus(new Date(), slots));
     };
 
-    const syncScheduleStatus = async () => {
-      try {
-        await supabase.functions.invoke("toggle-live-stream");
-      } catch {
-        setLoadError("Unable to synchronize live schedule status.");
-      } finally {
-        fetchSettings();
-        fetchSchedule();
-      }
+    const refreshData = () => {
+      fetchSettings();
+      fetchSchedule();
     };
 
-    fetchSettings();
-    fetchSchedule();
-    syncScheduleStatus();
-    const intervalId = window.setInterval(syncScheduleStatus, 60_000);
+    refreshData();
+    const intervalId = window.setInterval(refreshData, 60_000);
 
     const channel = supabase.channel("live-stream-status")
       .on("postgres_changes", { event: "*", schema: "public", table: "live_stream_settings" }, (payload) => {
@@ -186,112 +178,99 @@ const LiveDarshan = ({ simple = false }: LiveDarshanProps) => {
   const liveBadgeLabel = displayIsLive ? t("liveDarshan.liveNow") : scheduleStatus?.isInSchedule ? "Scheduled Live" : t("liveDarshan.currentlyOffline");
 
   return (
-    <section className="py-10 md:py-24 bg-maroon/70 dark:bg-maroon/95 text-foreground relative overflow-hidden border-t-4 border-gold/30">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(218,165,32,0.08),rgba(218,165,32,0))]" />
-      <div className="absolute top-0 left-0 w-32 md:w-96 h-32 md:h-96 bg-gold/15 dark:bg-gold/20 rounded-full blur-3xl opacity-40" />
-      <div className="absolute bottom-0 right-0 w-48 md:w-[500px] h-48 md:h-[500px] bg-saffron/15 dark:bg-saffron/20 rounded-full blur-3xl opacity-40" />
-      <div className="absolute top-1/2 left-1/3 w-64 md:w-96 h-64 md:h-96 bg-orange/10 dark:bg-orange/15 rounded-full blur-3xl opacity-30" />
+    <section className="py-10 sm:py-14 md:py-20 bg-gradient-to-b from-amber-50/40 via-background to-orange-50/20 dark:from-background dark:via-slate-950/60 dark:to-background text-foreground relative overflow-hidden border-t border-border/40">
+      {/* Subtle slow ambient sacred light behind section - motion safe & non-interactive */}
+      <div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] max-w-4xl h-[70%] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gold/10 via-amber-500/5 to-transparent blur-3xl pointer-events-none -z-0 motion-safe:animate-pulse-slow" 
+        aria-hidden="true" 
+      />
+      <div 
+        className="absolute -top-10 right-1/4 w-80 h-80 bg-amber-400/5 dark:bg-gold/5 rounded-full blur-3xl pointer-events-none -z-0 motion-safe:animate-pulse-slow" 
+        style={{ animationDuration: "8s" }} 
+        aria-hidden="true" 
+      />
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="grid gap-10 lg:grid-cols-[1.7fr_1fr] items-start">
-          <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <Badge className="bg-gold/15 dark:bg-gold/10 text-gold border-gold/30 dark:border-gold/20 shadow-md">
-                {displayIsLive ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-destructive mr-2 inline-block animate-ping" />
-                    {liveBadgeLabel}
-                  </>
-                ) : (
-                  <>
-                    <Clock className="h-3 w-3 mr-1" />
-                    {liveBadgeLabel}
-                  </>
-                )}
-              </Badge>
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="rounded-2xl bg-gold/10 dark:bg-slate-800/50 px-6 py-3 text-sm border border-gold/30 dark:border-gold/40 shadow-md">
-                  <p className="text-xs uppercase tracking-[0.25em] text-gold/80 font-bold">{t("liveDarshan.streamType")}</p>
-                  <p className="mt-1 font-bold text-gold text-base">{effectiveStreamType.toUpperCase()}</p>
-                </div>
-                <div className="rounded-2xl bg-saffron/10 dark:bg-slate-800/50 px-6 py-3 text-sm border border-saffron/30 dark:border-saffron/40 shadow-md">
-                  <p className="text-xs uppercase tracking-[0.25em] text-saffron/80 font-bold">{t("liveDarshan.viewerCount")}</p>
-                  <p className="mt-1 font-bold text-saffron text-base">{settings.viewer_count.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-
+      <div className="container mx-auto px-4 max-w-5xl relative z-10">
+        <div className="space-y-6 sm:space-y-8">
+          {/* Section Header & Status */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
             <div>
-              <h2 className="font-heading text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 drop-shadow-lg">
-                {t("liveDarshan.title")} <span className="bg-gradient-to-r from-gold via-orange to-saffron bg-clip-text text-transparent">{t("liveDarshan.titleHighlight")}</span>
+              <div className="inline-flex items-center gap-2 mb-2">
+                <Badge className={displayIsLive ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 px-3 py-1 font-semibold" : "bg-muted text-muted-foreground border-border px-3 py-1"}>
+                  {displayIsLive ? (
+                    <>
+                      <span className="relative flex h-2 w-2 mr-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                      </span>
+                      {liveBadgeLabel}
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="h-3.5 w-3.5 mr-1.5" />
+                      {liveBadgeLabel}
+                    </>
+                  )}
+                </Badge>
+                {displayIsLive && settings.viewer_count > 0 && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground border-border/60 px-2.5 py-1">
+                    <Users className="h-3 w-3 mr-1" />
+                    {settings.viewer_count.toLocaleString()} devotees watching
+                  </Badge>
+                )}
+              </div>
+              <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
+                {t("liveDarshan.title")} <span className="text-gradient-sacred">{t("liveDarshan.titleHighlight")}</span>
               </h2>
-              <p className="text-gray-800 dark:text-white/90 text-base md:text-lg max-w-3xl font-medium leading-relaxed">
-                {effectiveDescription ?? t("liveDarshan.subtitle")}
-              </p>
-              <p className="mt-3 text-sm md:text-base text-muted-foreground max-w-3xl">
+              <p className="mt-1 text-sm md:text-base text-muted-foreground max-w-2xl">
                 {statusDescription}
               </p>
-              {loadError ? (
-                <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-destructive">
-                  <p className="font-semibold">Live darshan unavailable</p>
-                  <p className="mt-1 text-sm">{loadError} Please refresh the page or check your stream configuration.</p>
-                </div>
-              ) : null}
             </div>
 
-            <div className="rounded-3xl border-4 border-gold/40 dark:border-gold/50 bg-black/30 dark:bg-black/50 backdrop-blur-sm p-4 md:p-8 shadow-lg hover:shadow-2xl hover:shadow-gold/30 dark:hover:shadow-gold/40 transition-all duration-300">
-              <HLSVideoPlayer
-                streamUrl={effectiveStreamUrl}
-                backupStreamUrl={effectiveBackupStreamUrl}
-                isLive={displayIsLive}
-                title={effectiveTitle}
-                viewerCount={settings.viewer_count}
-                streamType={effectiveStreamType}
-              />
-            </div>
-          </div>
-
-          {!simple && (
-            <aside className="space-y-6">
-            <Card className="bg-gold/5 dark:bg-slate-800/60 border-2 border-gold/30 dark:border-gold/50 shadow-lg hover:shadow-xl transition-all">
-              <CardContent className="p-7">
-                <p className="text-xs uppercase tracking-[0.4em] text-gold font-bold">{t("liveDarshan.featureBadge")}</p>
-                <h3 className="mt-4 text-2xl font-heading font-bold text-gray-900 dark:text-white drop-shadow">{t("liveDarshan.featureTitle")}</h3>
-                <p className="mt-4 text-sm leading-6 text-gray-800 dark:text-gray-200 font-medium">{t("liveDarshan.featureSubtitle")}</p>
-                <div className="mt-6 grid gap-3">
-                  {[
-                    t("liveDarshan.featurePoint1"),
-                    t("liveDarshan.featurePoint2"),
-                    t("liveDarshan.featurePoint3"),
-                  ].map((point) => (
-                    <div key={point} className="rounded-xl bg-white dark:bg-slate-700/60 p-4 border border-gold/20 dark:border-gold/40 text-sm text-gray-800 dark:text-gray-100 font-medium hover:bg-gold/5 dark:hover:bg-slate-600 transition-all hover:shadow-md">
-                      {point}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-saffron/5 dark:bg-slate-800/60 border-2 border-saffron/30 dark:border-saffron/50 shadow-lg hover:shadow-xl transition-all">
-              <CardContent className="p-7 space-y-5">
-                <div className="flex items-center gap-3 text-gray-900 dark:text-white">
-                  <div className="p-2 rounded-lg bg-saffron/10 dark:bg-saffron/30">
-                    <Share2 className="h-5 w-5 text-saffron" />
-                  </div>
-                  <p className="text-sm font-bold tracking-wide">{t("liveDarshan.shareLive")}</p>
-                </div>
-                <Button size="lg" className="w-full bg-gradient-to-r from-gold to-orange hover:from-gold/80 hover:to-orange/80 text-white font-bold text-base transition-all shadow-lg hover:shadow-xl" onClick={handleCopyLink}>
+            {settings.stream_url && (
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyLink}
+                  className="rounded-xl border-border/60 hover:bg-muted text-xs sm:text-sm font-medium shadow-sm"
+                >
+                  <Share2 className="h-3.5 w-3.5 mr-1.5 text-primary" />
                   {copied ? t("liveDarshan.copied") : t("liveDarshan.copyLink")}
                 </Button>
-                <Button asChild size="lg" className="w-full border-2 border-saffron/40 dark:border-saffron/60 text-gray-900 dark:text-white bg-white dark:bg-slate-700 hover:bg-saffron/5 dark:hover:bg-slate-600 font-bold text-base transition-all">
-                  <a href="https://wa.me/?text=Watch%20live%20darshan%20from%20Kailash%20Mahadev%20Temple%20Agra%20https://kailashmahadev.in/live-darshan" target="_blank" rel="noreferrer">
-                    {t("liveDarshan.shareWithFamily")}
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-          </aside>
+              </div>
+            )}
+          </div>
+
+          {loadError && (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-destructive text-sm">
+              <p className="font-semibold">Live darshan stream status</p>
+              <p className="mt-0.5">{loadError}</p>
+            </div>
           )}
+
+          {/* Single Focused Player Window with Refined Temple Border & Sacred Aura */}
+          <div className="relative max-w-4xl mx-auto">
+            {/* Subtle sacred ambient glow behind player window - respectful of reduced motion */}
+            <div
+              className="absolute -inset-1 sm:-inset-2 rounded-[2rem] bg-gradient-to-r from-amber-500/25 via-saffron/20 to-gold/30 blur-xl opacity-75 dark:opacity-60 -z-10 motion-safe:animate-pulse-slow pointer-events-none"
+              aria-hidden="true"
+            />
+
+            {/* Sacred gradient border frame with restrained gold/saffron accents */}
+            <div className="relative p-1.5 sm:p-2 rounded-[1.8rem] bg-gradient-to-tr from-gold/60 via-saffron/40 to-gold/70 dark:from-gold/70 dark:via-amber-500/40 dark:to-gold/80 shadow-[0_20px_50px_rgba(212,143,24,0.14)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-gold/30">
+              <div className="relative rounded-[1.35rem] overflow-hidden bg-black aspect-video ring-1 ring-black/20">
+                <HLSVideoPlayer
+                  streamUrl={effectiveStreamUrl}
+                  backupStreamUrl={effectiveBackupStreamUrl}
+                  isLive={displayIsLive}
+                  title={effectiveTitle}
+                  viewerCount={settings.viewer_count}
+                  streamType={effectiveStreamType}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

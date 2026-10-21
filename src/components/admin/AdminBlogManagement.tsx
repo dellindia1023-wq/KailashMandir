@@ -34,7 +34,9 @@ type BlogFormState = {
 };
 
 export const AdminBlogManagement = () => {
-  const { data: blogs, isLoading: blogsLoading } = useBlogs();
+  const { data: blogs, isLoading: blogsLoading, error: blogsError } = useBlogs(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "published" | "draft">("all");
   const { data: categories } = useBlogCategories();
   const createBlog = useCreateBlog();
   const updateBlog = useUpdateBlog();
@@ -91,6 +93,22 @@ export const AdminBlogManagement = () => {
       }),
     [categories, formData.content, formData.excerpt, formData.seo_description, formData.seo_keywords, formData.seo_title, formData.slug, formData.title, formData.category_id]
   );
+
+  const filteredBlogs = useMemo(() => {
+    return (blogs || []).filter((blog) => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        blog.title.toLowerCase().includes(q) ||
+        blog.slug.toLowerCase().includes(q) ||
+        (blog.excerpt || "").toLowerCase().includes(q);
+      const matchesStatus = filterStatus === "all" || blog.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [blogs, searchQuery, filterStatus]);
+
+  const draftCount = useMemo(() => (blogs || []).filter((b) => b.status === "draft").length, [blogs]);
+  const publishedCount = useMemo(() => (blogs || []).filter((b) => b.status === "published").length, [blogs]);
 
   const handleTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const title = e.target.value;
@@ -168,25 +186,27 @@ export const AdminBlogManagement = () => {
     await handleMediaUpload(file, file.type.startsWith("video/") ? "video" : "image", "inline");
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
+  const handleSave = async (statusOverride?: BlogStatus) => {
     if (!formData.title || !formData.content || !formData.category_id) {
       toast.error("Please fill in all required fields");
       return;
     }
 
+    const effectiveStatus = statusOverride ?? formData.status;
+
     const contentWithMedia = formData.featured_video_url
       ? `${formData.content}\n\n[Featured video](${formData.featured_video_url})`
       : formData.content;
 
-    const { featured_video_url, featured_image_caption, ...restFormData } = formData;
     const blogData = {
-      ...restFormData,
+      ...formData,
+      status: effectiveStatus,
       content: contentWithMedia,
       featured_image_url: formData.featured_image_url || null,
+      featured_video_url: formData.featured_video_url || null,
+      featured_image_caption: formData.featured_image_caption || null,
       image_alt: formData.image_alt || null,
-      published_at: formData.status === "published" ? new Date().toISOString() : null,
+      published_at: effectiveStatus === "published" ? (editingBlog?.published_at || new Date().toISOString()) : null,
     };
 
     try {
@@ -202,6 +222,10 @@ export const AdminBlogManagement = () => {
     }
   };
 
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    await handleSave();
+  };
   const resetForm = () => {
     setFormData({
       title: "",
@@ -331,7 +355,6 @@ export const AdminBlogManagement = () => {
                       <select id="status" name="status" value={formData.status} onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as BlogStatus }))} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2">
                         <option value="draft">Draft</option>
                         <option value="published">Published</option>
-                        <option value="archived">Archived</option>
                       </select>
                     </div>
                   </div>
@@ -516,9 +539,24 @@ export const AdminBlogManagement = () => {
                 <Button variant="outline" onClick={resetForm} type="button" className="w-full sm:w-auto">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createBlog.isPending || updateBlog.isPending || isUploading} className="w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={createBlog.isPending || updateBlog.isPending || isUploading}
+                  onClick={() => void handleSave("draft")}
+                  className="w-full sm:w-auto"
+                >
                   {createBlog.isPending || updateBlog.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {editingBlog ? "Update Blog" : "Create Blog"}
+                  Save Draft
+                </Button>
+                <Button
+                  type="button"
+                  disabled={createBlog.isPending || updateBlog.isPending || isUploading}
+                  onClick={() => void handleSave("published")}
+                  className="w-full sm:w-auto"
+                >
+                  {createBlog.isPending || updateBlog.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {editingBlog ? (formData.status === "published" ? "Save Changes" : "Publish Blog") : "Publish Blog"}
                 </Button>
               </div>
             </form>
@@ -526,13 +564,62 @@ export const AdminBlogManagement = () => {
         </Card>
       )}
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={filterStatus === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilterStatus("all")}
+          >
+            All ({blogs?.length || 0})
+          </Button>
+          <Button
+            type="button"
+            variant={filterStatus === "draft" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilterStatus("draft")}
+          >
+            Drafts ({draftCount})
+          </Button>
+          <Button
+            type="button"
+            variant={filterStatus === "published" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilterStatus("published")}
+          >
+            Published ({publishedCount})
+          </Button>
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search blogs..."
+            className="w-full"
+          />
+        </div>
+      </div>
+
       <div className="space-y-2">
         {blogsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
-        ) : blogs && blogs.length > 0 ? (
-          blogs.map((blog) => (
+        ) : blogsError ? (
+          <Card>
+            <CardContent className="pt-6 text-center text-destructive">
+              Failed to load blogs. Please refresh the page.
+            </CardContent>
+          </Card>
+        ) : blogs && blogs.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6 text-center text-muted-foreground">
+              No blogs yet. Create your first blog post!
+            </CardContent>
+          </Card>
+        ) : filteredBlogs.length > 0 ? (
+          filteredBlogs.map((blog) => (
             <Card key={blog.id}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-3">
@@ -562,7 +649,9 @@ export const AdminBlogManagement = () => {
           ))
         ) : (
           <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">No blogs yet. Create your first blog post!</CardContent>
+            <CardContent className="pt-6 text-center text-muted-foreground">
+              No blogs match the selected filter.
+            </CardContent>
           </Card>
         )}
       </div>

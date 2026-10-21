@@ -12,7 +12,7 @@ import TempleDivider from "@/components/TempleDivider";
 import SEOHead from "@/components/SEOHead";
 import useScrollReveal from "@/hooks/useScrollReveal";
 import { Loader2, Search, ChevronDown, ChevronUp, HelpCircle, Sparkles, Compass, BookOpen } from "lucide-react";
-import templeHero from "@/assets/gallery/devotees-prayer.jpg";
+import shivlingShringar2 from "@/assets/gallery/shivling-shringar-2.jpg";
 import { BASE_URL } from "@/constants/seo";
 import { buildContentAutomationMetadata, buildKnowledgeContentMetadata, buildKnowledgeArticleSlug } from "@/lib/contentSeo";
 import { MarkdownContent } from "@/components/MarkdownContent";
@@ -137,11 +137,16 @@ export default function KnowledgeHubPage() {
       />
       <Header />
       <PageHeroBanner
-        image={templeHero}
-        title="Knowledge Hub"
-        highlight="FAQ & Answers"
-        subtitle="Find answers to your questions about Kailash Mahadev Temple"
-        mantra="ॐ नमः शिवाय"
+        image={shivlingShringar2}
+        title="Temple"
+        highlight="Knowledge Hub"
+        subtitle="Devotee guide, frequently asked questions, ritual significances, and visitor information."
+        mantra="जिज्ञासा एवं समाधान"
+        badge={
+          <Badge className="bg-primary/20 text-gold-light border-gold/30 text-xs px-3 py-1 font-medium">
+            श्रद्धालु दिग्दर्शिका · Devotee Guide
+          </Badge>
+        }
       />
 
       <ImageShimmer />

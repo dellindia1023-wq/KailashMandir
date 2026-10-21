@@ -3,6 +3,7 @@ import SEOHead from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import TempleDivider from "@/components/TempleDivider";
 import useScrollReveal from "@/hooks/useScrollReveal";
 import { Card, CardContent } from "@/components/ui/card";
@@ -117,26 +118,20 @@ const Events = () => {
       />
       <Header />
       <main>
-        <section className="pt-8 md:pt-10 pb-6 bg-background">
-          <div className="container mx-auto px-4 text-center">
-            <div className="inline-flex items-center justify-center gap-3 mb-4">
-              <span className="inline-flex items-center rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold">
-                शिव उत्सव
-              </span>
-            </div>
-            <h1 className="font-heading text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-gold via-orange to-saffron bg-clip-text text-transparent mb-4">
-              {t("events.title")}
-            </h1>
-            <div className="mx-auto max-w-3xl rounded-[2rem] border border-gold/20 bg-white/80 dark:bg-slate-900/70 p-6 shadow-[0_24px_60px_rgba(114,46,33,0.14)]">
-              <p className="text-gray-700 dark:text-gray-300 text-base md:text-lg leading-relaxed">
-                {t("events.subtitle")}
-              </p>
-            </div>
-            <span className="mt-6 block h-1.5 w-24 mx-auto rounded-full bg-gradient-to-r from-gold to-orange"></span>
-          </div>
-        </section>
+        <PageHeroBanner
+          image={festivalImg}
+          title="Sacred"
+          highlight="Festivals & Events"
+          subtitle={t("events.subtitle")}
+          mantra="शिव उत्सव एवं महापर्व"
+          badge={
+            <Badge className="bg-gold/20 text-gold-dark dark:text-gold-light border-gold/40 text-xs px-3 py-1 font-medium">
+              शिव उत्सव · Temple Celebrations
+            </Badge>
+          }
+        />
 
-        <section className="py-10 md:py-12 bg-background">
+        <section className="py-8 md:py-12 bg-background">
           <div className="container mx-auto px-4">
             <CampaignSlot locationKey="events.top" pageType="events" />
           </div>

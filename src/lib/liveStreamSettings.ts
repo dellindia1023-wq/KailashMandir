@@ -116,40 +116,21 @@ export async function fetchLiveStreamSettings(): Promise<{
   error: any | null;
 }> {
   try {
-    const firstAttempt = await supabase
+    const attempt = await supabase
       .from("live_stream_settings")
-      .select(LIVE_STREAM_SETTINGS_COLUMNS)
+      .select(LIVE_STREAM_SETTINGS_MINIMAL_COLUMNS)
       .limit(1)
       .maybeSingle();
 
-    if (!firstAttempt.error) {
-      const data = firstAttempt.data as LiveStreamSettingsPayload | null;
+    if (!attempt.error) {
+      const data = attempt.data as LiveStreamSettingsPayload | null;
       if (data) {
         writePersistedLiveStreamSettings(data);
       }
       return { data, error: null };
     }
 
-    if (isInvalidColumnError(firstAttempt.error)) {
-      useMinimalLiveStreamSettingsColumns = true;
-      const fallback = await supabase
-        .from("live_stream_settings")
-        .select(LIVE_STREAM_SETTINGS_MINIMAL_COLUMNS)
-        .limit(1)
-        .maybeSingle();
-
-      if (fallback.error) {
-        return { data: null, error: fallback.error };
-      }
-
-      const data = fallback.data as LiveStreamSettingsPayload | null;
-      if (data) {
-        writePersistedLiveStreamSettings(data);
-      }
-      return { data, error: null };
-    }
-
-    return { data: null, error: firstAttempt.error };
+    return { data: null, error: attempt.error };
   } catch (error) {
     return { data: null, error };
   }
@@ -219,30 +200,16 @@ export async function saveLiveStreamSettings(
       .maybeSingle();
   };
 
-  const attempt = await performQuery(useMinimalLiveStreamSettingsColumns ? minimalPayload : fullPayload);
+  const attempt = await performQuery(minimalPayload);
   if (!attempt.error) {
     const data = attempt.data as LiveStreamSettingsPayload | null;
     if (data) {
-      writePersistedLiveStreamSettings(data);
+      writePersistedLiveStreamSettings({ ...payload, ...data });
     }
     return { data, error: null };
   }
 
-  if (isInvalidColumnError(attempt.error)) {
-    useMinimalLiveStreamSettingsColumns = true;
-    const fallback = await performQuery(minimalPayload);
-    if (fallback.error) {
-      writePersistedLiveStreamSettings({ ...payload });
-      return { data: null, error: fallback.error };
-    }
-
-    const data = fallback.data as LiveStreamSettingsPayload | null;
-    if (data) {
-      writePersistedLiveStreamSettings(data);
-    }
-    return { data, error: null };
-  }
-
+  writePersistedLiveStreamSettings({ ...payload });
   return { data: null, error: attempt.error };
 }
 
@@ -406,9 +373,16 @@ export const resolveLiveStreamState = ({
     };
   }
 
+  if (isLive) {
+    return {
+      isLive: true,
+      reason: "manual",
+    };
+  }
+
   if (scheduleInWindow) {
     return {
-      isLive: isLive || scheduleInWindow,
+      isLive: true,
       reason: "schedule",
     };
   }

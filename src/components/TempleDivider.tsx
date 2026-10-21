@@ -1,5 +1,5 @@
 const TempleDivider = () => (
-  <div className="flex items-center justify-center py-6 md:py-10 overflow-hidden">
+  <div className="flex items-center justify-center py-2 md:py-4 overflow-hidden" aria-hidden="true">
     <div className="h-px flex-1 max-w-32 bg-gradient-to-r from-transparent via-gold/30 to-gold/60 animate-pulse-border" />
     <div className="mx-3 flex items-center gap-1.5">
       <div className="w-1.5 h-1.5 rotate-45 bg-gold/40 animate-sparkle" style={{ animationDelay: "0s" }} />

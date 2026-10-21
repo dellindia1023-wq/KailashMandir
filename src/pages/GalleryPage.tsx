@@ -2,10 +2,13 @@ import Header from "@/components/Header";
 import SEOHead from "@/components/SEOHead";
 import Footer from "@/components/Footer";
 import Gallery from "@/components/Gallery";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import TempleDivider from "@/components/TempleDivider";
 import useScrollReveal from "@/hooks/useScrollReveal";
 import shivaLingam from "@/assets/gallery/shivling-chandan.jpg";
+import shivlingGarland from "@/assets/gallery/shivling-garland.jpg";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ArrowRight, Video } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -42,24 +45,18 @@ const GalleryPage = () => {
       />
       <Header />
       <main>
-        <section className="pt-10 md:pt-14 pb-8 bg-background">
-          <div className="container mx-auto px-4 text-center">
-            <div className="inline-flex items-center justify-center gap-3 mb-4">
-              <span className="inline-flex items-center rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold">
-                फोटो दीर्घा
-              </span>
-            </div>
-            <h1 className="font-heading text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-gold via-orange to-saffron bg-clip-text text-transparent mb-4">
-              {t("gallery.pageTitle")}
-            </h1>
-            <div className="mx-auto max-w-3xl rounded-[2rem] border border-gold/20 bg-white/80 dark:bg-slate-900/70 p-6 shadow-[0_24px_60px_rgba(114,46,33,0.14)]">
-              <p className="text-gray-700 dark:text-gray-300 text-base md:text-lg leading-relaxed">
-                {t("gallery.pageSubtitle")}
-              </p>
-            </div>
-            <span className="mt-6 block h-1.5 w-24 mx-auto rounded-full bg-gradient-to-r from-gold to-orange"></span>
-          </div>
-        </section>
+        <PageHeroBanner
+          image={shivlingGarland}
+          title="Sacred"
+          highlight="Photo Gallery"
+          subtitle={t("gallery.pageSubtitle")}
+          mantra="दिव्य दर्शन दीर्घा"
+          badge={
+            <Badge className="bg-gold/20 text-gold-dark dark:text-gold-light border-gold/40 text-xs px-3 py-1 font-medium">
+              फोटो दीर्घा · Divine Moments
+            </Badge>
+          }
+        />
 
         {/* Main Gallery */}
         <section ref={revealGallery.ref} className={`py-10 md:py-16 ${revealGallery.className}`}>

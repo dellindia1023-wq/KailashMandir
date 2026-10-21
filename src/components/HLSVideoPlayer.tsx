@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import Hls from "hls.js";
-import { Play, Pause, Maximize, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
+import { Play, Pause, Maximize, Volume2, VolumeX, Wifi, WifiOff, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import shivaLingam from "@/assets/gallery/shivling-chandan.jpg";
@@ -196,11 +196,34 @@ const HLSVideoPlayer = ({
 
   if (!isLive || !activeStreamUrl) {
     return (
-      <div ref={containerRef} className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background dark:bg-card flex items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <WifiOff className="h-10 w-10 mx-auto mb-3" />
-          <p className="font-heading text-xl font-bold">Stream Offline</p>
-          <p className="text-sm mt-1">Live darshan is not available right now.</p>
+      <div
+        ref={containerRef}
+        className="relative aspect-video rounded-[1.35rem] overflow-hidden bg-slate-950 flex items-center justify-center text-center p-6 sm:p-8"
+      >
+        {/* Subtle sanctum backdrop */}
+        <img
+          src={shivaLingam}
+          alt="Kailash Mahadev Sanctum"
+          className="absolute inset-0 w-full h-full object-cover opacity-25 scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/60 to-black/80" />
+
+        <div className="relative z-10 flex flex-col items-center justify-center max-w-md mx-auto">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gold/15 border border-gold/30 flex items-center justify-center mb-3 sm:mb-4 shadow-lg backdrop-blur-md">
+            <Flame className="h-6 w-6 sm:h-7 sm:w-7 text-gold animate-diya-glow" />
+          </div>
+
+          <Badge variant="outline" className="mb-2 bg-black/40 text-gold-light border-gold/30 text-xs px-3 py-1">
+            ॐ नमः शिवाय · Temple Sanctum
+          </Badge>
+
+          <h3 className="font-heading text-lg sm:text-2xl font-bold text-white mb-1.5 sm:mb-2 drop-shadow">
+            Darshan Currently Offline
+          </h3>
+
+          <p className="text-xs sm:text-sm text-white/80 leading-relaxed max-w-sm">
+            Daily Live Darshan will resume during the next scheduled aarti window. Please check the darshan schedule below.
+          </p>
         </div>
       </div>
     );
@@ -248,31 +271,22 @@ const HLSVideoPlayer = ({
   if (resolvedStreamType === "youtube") {
     const ytId = getYouTubeId(activeStreamUrl || streamUrl);
     return (
-      <div ref={containerRef} className="relative aspect-video rounded-2xl overflow-hidden border border-border/20 shadow-lg bg-background dark:bg-card">
+      <div ref={containerRef} className="relative w-full h-full aspect-video bg-black overflow-hidden">
         {ytId ? (
           <iframe
-            src={`https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&rel=0`}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=1&rel=0&modestbranding=1`}
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             title={title || "Live Darshan"}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-primary-foreground">
-            <p className="text-sm">Invalid YouTube URL</p>
+          <div className="flex flex-col items-center justify-center h-full text-center p-6 text-white/80">
+            <WifiOff className="h-8 w-8 text-amber-400 mb-2" />
+            <p className="font-heading font-semibold text-white">Stream Configuration Issue</p>
+            <p className="text-xs text-white/70 mt-1 max-w-sm">The configured YouTube stream URL could not be resolved. Please verify the URL in Admin Settings.</p>
           </div>
         )}
-        <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-none">
-          <Badge className="bg-destructive text-destructive-foreground animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-destructive-foreground mr-2 inline-block animate-ping" />
-            LIVE
-          </Badge>
-          {viewerCount > 0 && (
-            <Badge variant="secondary" className="bg-black/50 text-primary-foreground border-none">
-              <Wifi className="h-3 w-3 mr-1" /> {viewerCount.toLocaleString()} watching
-            </Badge>
-          )}
-        </div>
       </div>
     );
   }

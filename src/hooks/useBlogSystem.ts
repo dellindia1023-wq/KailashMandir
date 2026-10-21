@@ -184,10 +184,12 @@ export const useBlogs = (isAdmin: boolean = false) => {
         );
 
       if (!isAdmin) {
-        query = query.eq("status", "published");
+        query = query.eq("status", "published").order("published_at", { ascending: false });
+      } else {
+        query = query.order("created_at", { ascending: false });
       }
 
-      const { data, error } = await query.order("published_at", { ascending: false });
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as Blog[];
@@ -299,6 +301,7 @@ export const useCreateBlog = () => {
       // Remove nested `category` object before sending to the DB to avoid unknown column errors
       const payload: any = { ...enrichedBlog, view_count: 0 };
       if (payload.category) delete payload.category;
+      if (payload.tags) delete payload.tags;
 
       const { data, error } = await supabase
         .from("blogs")
@@ -345,6 +348,7 @@ export const useUpdateBlog = () => {
       // Remove nested `category` object before updating to avoid sending unknown fields
       const payload: any = { ...enrichedBlog };
       if (payload.category) delete payload.category;
+      if (payload.tags) delete payload.tags;
 
       const { data, error } = await supabase
         .from("blogs")

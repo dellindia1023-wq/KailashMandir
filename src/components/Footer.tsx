@@ -52,8 +52,13 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
   ];
 
   return (
-    <footer ref={ref} className="bg-maroon-dark text-primary-foreground">
-      <div className="container mx-auto px-4 py-8 md:py-12 md:px-6">
+    <footer ref={ref} className="relative bg-maroon-dark text-primary-foreground border-t border-gold/25 overflow-hidden">
+      {/* Subtle sacred ambient warmth */}
+      <div 
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 max-w-4xl h-28 bg-gradient-to-b from-gold/15 via-gold/5 to-transparent blur-2xl pointer-events-none"
+        aria-hidden="true"
+      />
+      <div className="container mx-auto px-4 py-8 md:py-12 md:px-6 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
             <div className="flex items-center gap-3 mb-3">

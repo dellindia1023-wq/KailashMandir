@@ -13,6 +13,17 @@ export interface PujaDetailsRecord {
   icon_url?: string | null;
 }
 
+export interface PujaSamagriItem {
+  id?: string;
+  name?: string;
+  price?: number;
+  label: string;
+  amount: number;
+  description?: string;
+  included?: boolean;
+  isIncluded?: boolean;
+}
+
 export interface PujaBookingSettingsRecord {
   price?: number | null;
   discount_price?: number | null;
@@ -30,6 +41,7 @@ export interface PujaBookingSettingsRecord {
   recommended?: boolean | null;
   priority?: number | null;
   sort_order?: number | null;
+  additional_charges?: PujaSamagriItem[] | unknown;
 }
 
 export interface PujaSeoRecord {
@@ -127,6 +139,7 @@ export interface NormalizedPuja {
   priority: number;
   sortOrder: number;
   benefits: string[];
+  additionalCharges: PujaSamagriItem[];
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
@@ -175,6 +188,39 @@ export const isPujaVisible = (row: Pick<PujaCmsRecord, "is_active" | "active">) 
   }
 
   return true;
+};
+
+export const parseAdditionalCharges = (raw: unknown): PujaSamagriItem[] => {
+  if (!raw) return [];
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item, index) => {
+      const label = String(item.label || item.name || "").trim();
+      const amount = Math.max(0, Number(item.amount ?? item.price ?? 0));
+      const included = Boolean(item.included ?? item.is_included ?? item.isIncluded ?? false);
+      const description = item.description ? String(item.description).trim() : undefined;
+      const id = item.id ? String(item.id) : `samagri-${index}`;
+      return {
+        id,
+        label,
+        name: label,
+        amount,
+        price: amount,
+        description,
+        included,
+        isIncluded: included,
+      };
+    })
+    .filter((item) => item.label.length > 0);
 };
 
 export const normalizePujaRecord = (row: PujaCmsRecord): NormalizedPuja => {
@@ -232,6 +278,7 @@ export const normalizePujaRecord = (row: PujaCmsRecord): NormalizedPuja => {
       : Array.isArray(row.benefits)
       ? row.benefits.filter(Boolean)
       : [],
+    additionalCharges: parseAdditionalCharges(settings?.additional_charges ?? row.additional_charges),
     seoTitle: seo?.seo_title || "",
     seoDescription: seo?.seo_description || "",
     seoKeywords: seo?.seo_keywords || "",

@@ -63,4 +63,48 @@ describe("puja CMS helpers", () => {
     expect(isPujaVisible({ is_active: false, active: true })).toBe(true);
     expect(isPujaVisible({ is_active: false, active: false })).toBe(false);
   });
+
+  it("parses and normalizes optional and included puja samagri", () => {
+    const row = {
+      id: "puja-3",
+      name: "Maha Rudrabhishek",
+      price: 2100,
+      puja_booking_settings: {
+        price: 2500,
+        additional_charges: [
+          { name: "Special Belpatra", price: 200, is_included: false, description: "108 fresh bilva leaves" },
+          { name: "Gangajal & Panchamrit", price: 0, is_included: true, description: "Holy water and 5 sacred nectars" },
+          { label: "Silver Bilva Patra", amount: 500 },
+        ],
+      },
+    };
+
+    const puja = normalizePujaRecord(row);
+
+    expect(puja.price).toBe(2500);
+    expect(puja.additionalCharges).toHaveLength(3);
+    expect(puja.additionalCharges[0]).toMatchObject({
+      id: "samagri-0",
+      name: "Special Belpatra",
+      label: "Special Belpatra",
+      price: 200,
+      amount: 200,
+      isIncluded: false,
+      included: false,
+      description: "108 fresh bilva leaves",
+    });
+    expect(puja.additionalCharges[1]).toMatchObject({
+      id: "samagri-1",
+      name: "Gangajal & Panchamrit",
+      price: 0,
+      isIncluded: true,
+      description: "Holy water and 5 sacred nectars",
+    });
+    expect(puja.additionalCharges[2]).toMatchObject({
+      id: "samagri-2",
+      name: "Silver Bilva Patra",
+      price: 500,
+      isIncluded: false,
+    });
+  });
 });

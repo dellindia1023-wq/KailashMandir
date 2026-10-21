@@ -49,4 +49,16 @@ describe("live stream settings", () => {
     expect(state.isLive).toBe(true);
     expect(state.reason).toBe("schedule");
   });
+
+  it("respects direct is_live: true from database settings when outside schedule", () => {
+    const state = resolveLiveStreamState({
+      isLive: true,
+      manualOverride: false,
+      manualLive: false,
+      scheduleInWindow: false,
+    });
+
+    expect(state.isLive).toBe(true);
+    expect(state.reason).toBe("manual");
+  });
 });

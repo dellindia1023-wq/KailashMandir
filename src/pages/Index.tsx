@@ -346,28 +346,17 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
-        <div className="bg-gradient-to-b from-background/50 dark:from-slate-900/50 to-background dark:to-slate-900 py-6 md:py-10 border-b border-gold/10 dark:border-gold/20">
-          <div className="container mx-auto px-4 text-center">
-            <div className="inline-flex items-center gap-3 text-gold/50 dark:text-gold/60">
-              <div className="h-1 w-12 bg-gradient-to-r from-transparent to-gold/40 dark:to-gold/50"></div>
-              <Flame className="h-3 w-3 animate-diya-glow" />
-              <div className="h-1 w-12 bg-gradient-to-l from-transparent to-gold/40 dark:to-gold/50"></div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-0">
-          <LiveDarshan simple />
-        </div>
+        <LiveDarshan simple />
         {/* Homepage hero campaigns removed to avoid duplicate live-darshan static card */}
         <NoticeMarquee />
         <NextAartiCountdown />
         {/* ═══ Sacred Mantra Ticker ═══ */}
-        <div className="bg-maroon/90 py-2 overflow-hidden relative">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22%23fff%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2220%22%20r%3D%221.5%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E')]" />
+        <div className="bg-gradient-to-r from-maroon via-maroon-dark to-maroon py-2.5 overflow-hidden relative border-y border-gold/30 shadow-sm">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/10 to-transparent pointer-events-none" />
           <div className="flex animate-marquee whitespace-nowrap relative z-10">
             {[...sacredMantras, ...sacredMantras].map((mantra, i) => (
-              <span key={i} className="mx-6 md:mx-10 text-gold font-heading text-sm md:text-base tracking-widest flex items-center gap-2">
-                <Flame className="h-3 w-3 text-saffron-light animate-diya-glow" />
+              <span key={i} className="mx-6 md:mx-10 text-gold-light font-heading text-sm md:text-base tracking-widest flex items-center gap-2 drop-shadow-sm font-medium">
+                <Flame className="h-3.5 w-3.5 text-gold animate-diya-glow" />
                 {mantra}
               </span>
             ))}
@@ -375,10 +364,10 @@ const Index = () => {
         </div>
 
         {/* ═══ Animated Stats Bar ═══ */}
-        <section ref={revealStats.ref} className={`relative py-6 md:py-8 bg-gradient-saffron overflow-hidden ${revealStats.className}`}>
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22%23fff%22%20fill-opacity%3D%220.08%22%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2220%22%20r%3D%222%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E')]" />
+        <section ref={revealStats.ref} className={`relative py-8 md:py-10 bg-gradient-saffron overflow-hidden border-b border-gold/30 ${revealStats.className}`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-400/20 via-transparent to-transparent pointer-events-none" />
           <div className="container mx-auto px-4 relative z-10">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {[
                 { ref: counter1.ref, count: `${counter1.count}+`, label: t("index.stats.yearsHeritage") },
                 { ref: counter2.ref, count: `${counter2.count.toLocaleString()}+`, label: t("index.stats.dailyDevotees") },
@@ -388,10 +377,10 @@ const Index = () => {
                 <div
                   key={i}
                   ref={stat.ref}
-                  className="text-center p-4 rounded-xl bg-primary-foreground/5 backdrop-blur-sm border border-primary-foreground/10 animate-shimmer transition-transform duration-300 hover:scale-105"
+                  className="text-center p-4 md:p-5 rounded-2xl bg-black/20 dark:bg-black/35 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-lg transition-transform duration-300 hover:scale-105"
                 >
-                  <p className="text-3xl md:text-5xl font-heading font-bold text-primary-foreground">{stat.count}</p>
-                  <p className="text-xs md:text-sm text-primary-foreground/80 mt-1">{stat.label}</p>
+                  <p className="text-3xl md:text-5xl font-heading font-bold text-white drop-shadow">{stat.count}</p>
+                  <p className="text-xs md:text-sm text-white/90 font-medium mt-1">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -559,8 +548,11 @@ const Index = () => {
         )}
 
         {/* ═══ Today's Aarti Schedule — Staggered ═══ */}
-        <section ref={revealAarti.ref} className={`py-10 md:py-20 bg-background ${revealAarti.className}`}>
-          <div className="container mx-auto px-4">
+        <section ref={revealAarti.ref} className={`py-12 md:py-20 bg-gradient-to-b from-background via-amber-50/25 to-background dark:from-background dark:via-card/40 dark:to-background relative overflow-hidden ${revealAarti.className}`}>
+          {/* Subtle ambient sacred aura - motion safe */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/8 via-gold/4 to-transparent pointer-events-none" aria-hidden="true" />
+          
+          <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-8 md:mb-12">
               <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">
                 <Clock className="h-3 w-3 mr-1" />
@@ -573,70 +565,92 @@ const Index = () => {
                 {t("darshan.subtitle")}
               </p>
             </div>
-            <div ref={aartiStagger.ref} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 max-w-5xl mx-auto">
+            
+            <div ref={aartiStagger.ref} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-5 max-w-7xl mx-auto">
               {isAartiLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <Card
                       key={`skeleton-${i}`}
-                      className={`animate-pulse border-border bg-muted/60 ${
+                      className={`animate-pulse border-border/60 bg-muted/50 rounded-2xl ${
                         aartiStagger.visibleItems[i] ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
                       }`}
                       style={{ transitionDelay: `${i * 80}ms` }}
                     >
-                      <CardContent className="p-4 md:p-5 h-28" />
+                      <CardContent className="p-5 h-48" />
                     </Card>
                   ))
                 : aartiSchedule.length > 0
                 ? aartiSchedule.map((aarti, i) => {
                     const status = getAartiStatus(aarti.start_time, aarti.end_time);
                     const Icon = getIconForAarti(aarti.name);
+                    const isLive = status === "Live";
+                    const isUpcoming = status === "Upcoming";
+                    
                     return (
                       <Card
                         key={aarti.id}
-                        className={`text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-lg ${
-                          status === "Live"
-                            ? "border-destructive bg-destructive/10"
+                        className={`group relative flex flex-col justify-between h-full rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                          isLive
+                            ? "border-red-500/60 bg-gradient-to-b from-red-500/10 via-background to-card shadow-md shadow-red-500/10 dark:from-red-950/20"
                             : aarti.is_special
-                            ? "border-gold bg-gold/5 animate-pulse-border"
-                            : "border-border bg-card"
+                            ? "border-gold/50 bg-gradient-to-b from-gold/15 via-background to-card shadow-sm shadow-gold/15"
+                            : isUpcoming
+                            ? "border-primary/40 bg-gradient-to-b from-primary/8 via-background to-card shadow-sm hover:border-primary/70"
+                            : "border-border/60 bg-card/85 opacity-90 hover:opacity-100 hover:border-gold/40"
                         } ${
                           aartiStagger.visibleItems[i] ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
                         }`}
                         style={{ transitionDelay: `${i * 80}ms` }}
                       >
-                        <CardContent className="p-4 md:p-5">
-                          <div className={`w-11 h-11 rounded-full mx-auto mb-3 flex items-center justify-center transition-all duration-300 ${
-                            aarti.is_special ? "bg-gold/20 text-gold" : "bg-primary/10 text-primary"
-                          }`}>
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="flex flex-wrap items-center justify-center gap-2">
-                              <Badge className={`text-[10px] px-2 py-1 ${
-                                status === "Live"
-                                  ? "bg-destructive text-destructive-foreground"
-                                  : status === "Upcoming"
-                                  ? "bg-primary/10 text-primary"
-                                  : "bg-muted text-muted-foreground"
-                              }`}>
-                                {status}
-                              </Badge>
+                        <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-3.5">
+                          {/* Top: Icon + Status Badges */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105 ${
+                              isLive
+                                ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                                : aarti.is_special
+                                ? "bg-gold/20 text-gold-dark dark:text-gold-light"
+                                : "bg-primary/10 text-primary"
+                            }`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-end gap-1.5">
                               {aarti.is_special && (
-                                <Badge className="bg-gold/20 text-gold border-gold/30 text-[10px] px-2 py-1">
-                                  <Sparkles className="h-3 w-3 mr-1 inline" />
+                                <Badge className="bg-gold/20 text-gold-dark dark:text-gold-light border-gold/40 text-[10px] px-1.5 py-0.5 font-medium shadow-none">
+                                  <Sparkles className="h-2.5 w-2.5 mr-0.5 inline" />
                                   Special
                                 </Badge>
                               )}
+                              <Badge className={`text-[10px] px-2 py-0.5 font-semibold shadow-none ${
+                                isLive
+                                  ? "bg-red-500 text-white"
+                                  : isUpcoming
+                                  ? "bg-primary/15 text-primary border border-primary/30"
+                                  : "bg-muted text-muted-foreground border border-border/50"
+                              }`}>
+                                {isLive && <span className="w-1.5 h-1.5 rounded-full bg-white mr-1 inline-block animate-ping" />}
+                                {status}
+                              </Badge>
                             </div>
-                            <h4 className="font-heading text-xs md:text-sm font-semibold text-foreground leading-tight">{aarti.name}</h4>
-                            <p className="text-xs md:text-sm font-semibold mt-0.5 text-primary">
-                              {formatTime(aarti.start_time)} - {formatTime(aarti.end_time)}
+                          </div>
+
+                          {/* Center: Title & Timing */}
+                          <div className="space-y-2 text-center">
+                            <h4 className="font-heading text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors min-h-[2.5rem] flex items-center justify-center leading-snug">
+                              {aarti.name}
+                            </h4>
+                            
+                            {/* Timing badge with Clock icon & non-breaking span */}
+                            <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-semibold text-xs whitespace-nowrap border border-primary/20 w-full">
+                              <Clock className="h-3 w-3 shrink-0" />
+                              <span>{formatTime(aarti.start_time)} – {formatTime(aarti.end_time)}</span>
+                            </div>
+
+                            {/* Description with normalized height */}
+                            <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed min-h-[2rem]">
+                              {aarti.description || "Sacred daily darshan & aarti ceremony"}
                             </p>
-                            {aarti.description && (
-                              <p className="text-[11px] text-muted-foreground leading-snug max-w-[10rem] mx-auto">
-                                {aarti.description}
-                              </p>
-                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -648,9 +662,10 @@ const Index = () => {
                   </div>
                 )}
             </div>
-            <div className="text-center mt-6">
+            
+            <div className="text-center mt-8">
               <Link to="/darshan-timings">
-                <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground group">
+                <Button variant="outline" className="rounded-xl border-primary text-primary hover:bg-primary hover:text-primary-foreground group px-6 py-2.5 shadow-sm">
                   {t("common.viewFullSchedule")} <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
@@ -661,8 +676,9 @@ const Index = () => {
         <TempleDivider />
 
         {/* ═══ Featured Pujas — Staggered with 3D hover ═══ */}
-        <section ref={revealPujas.ref} className={`py-10 md:py-20 bg-muted temple-pattern ${revealPujas.className}`}>
-          <div className="container mx-auto px-4">
+        <section ref={revealPujas.ref} className={`py-12 md:py-20 bg-muted/60 dark:bg-card/30 temple-pattern relative overflow-hidden ${revealPujas.className}`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-500/5 via-gold/3 to-transparent pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-8 md:mb-12">
               <Badge className="mb-3 bg-saffron/10 text-saffron border-saffron/20">
                 <BookOpen className="h-3 w-3 mr-1" />
@@ -677,27 +693,31 @@ const Index = () => {
             </div>
             <div ref={pujaStagger.ref} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {featuredPujas.map((puja, i) => (
-                <Link key={puja.name} to="/pujas">
+                <Link key={puja.name} to="/pujas" className="flex">
                   <Card
-                    className={`group overflow-hidden h-full transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border-saffron/10 animate-tilt-3d ${
+                    className={`group overflow-hidden w-full flex flex-col justify-between rounded-2xl transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 border border-border/70 dark:border-border/40 hover:border-gold/50 bg-card ${
                       pujaStagger.visibleItems[i]
                         ? "opacity-100 translate-y-0"
                         : "opacity-0 translate-y-10"
                     }`}
                     style={{ transitionDelay: `${i * 120}ms` }}
                   >
-                    <div className="relative h-44 md:h-52 overflow-hidden">
-                      <img src={puja.image} alt={puja.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-115" loading="lazy" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-                      <Badge className="absolute top-3 right-3 bg-gold text-accent-foreground font-semibold animate-shimmer">{puja.price}</Badge>
+                    <div>
+                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                        <img src={puja.image} alt={puja.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                        <Badge className="absolute top-3 right-3 bg-gold text-accent-foreground font-semibold shadow-md">{puja.price}</Badge>
+                      </div>
+                      <CardContent className="p-4 sm:p-5 space-y-2">
+                        <h3 className="font-heading font-bold text-foreground text-base sm:text-lg min-h-[2.5rem] flex items-center leading-snug group-hover:text-primary transition-colors">{puja.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed min-h-[2.5rem]">{puja.desc}</p>
+                      </CardContent>
                     </div>
-                    <CardContent className="p-4 md:p-5">
-                      <h3 className="font-heading font-semibold text-foreground text-base md:text-lg mb-1">{puja.name}</h3>
-                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{puja.desc}</p>
-                      <Button size="sm" className="w-full mt-3 bg-gradient-saffron hover:opacity-90 text-primary-foreground group-hover:glow-saffron transition-shadow">
-                        {t("common.bookNow")} <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                    <div className="p-4 sm:p-5 pt-0">
+                      <Button size="sm" className="w-full rounded-xl bg-gradient-saffron hover:opacity-90 text-primary-foreground group-hover:glow-saffron transition-shadow font-semibold">
+                        {t("common.bookNow")} <ArrowRight className="ml-1 h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                       </Button>
-                    </CardContent>
+                    </div>
                   </Card>
                 </Link>
               ))}
@@ -708,8 +728,9 @@ const Index = () => {
         <TempleDivider />
 
         {/* ═══ Upcoming Events Preview ═══ */}
-        <section ref={revealEvents.ref} className={`py-10 md:py-20 bg-background ${revealEvents.className}`}>
-          <div className="container mx-auto px-4">
+        <section ref={revealEvents.ref} className={`py-12 md:py-20 bg-gradient-to-b from-background via-amber-50/20 to-background dark:from-background dark:via-card/30 dark:to-background relative overflow-hidden ${revealEvents.className}`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/5 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-8 md:mb-12">
               <Badge className="mb-3 bg-maroon/10 text-maroon border-maroon/20">
                 <CalendarDays className="h-3 w-3 mr-1" />
@@ -779,8 +800,9 @@ const Index = () => {
         <TempleDivider />
 
         {/* ═══ Photo Gallery — 3D Tilt + Staggered ═══ */}
-        <section ref={revealGallery.ref} className={`py-10 md:py-20 bg-muted temple-pattern overflow-hidden ${revealGallery.className}`}>
-          <div className="container mx-auto px-4">
+        <section ref={revealGallery.ref} className={`py-12 md:py-20 bg-muted/60 dark:bg-card/40 temple-pattern overflow-hidden relative ${revealGallery.className}`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gold/5 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-8 md:mb-12">
               <Badge className="mb-3 bg-gold/10 text-gold border-gold/20">
                 <Camera className="h-3 w-3 mr-1" />
@@ -827,8 +849,9 @@ const Index = () => {
         <TempleDivider />
 
         {/* ═══ Testimonials — Smooth Slide Transitions ═══ */}
-        <section ref={revealTestimonials.ref} className={`py-10 md:py-20 bg-background ${revealTestimonials.className}`}>
-          <div className="container mx-auto px-4">
+        <section ref={revealTestimonials.ref} className={`py-12 md:py-20 bg-gradient-to-b from-background via-amber-50/20 to-background dark:from-background dark:via-muted/20 dark:to-background relative overflow-hidden ${revealTestimonials.className}`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-amber-500/5 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-8 md:mb-12">
               <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">
                 <Quote className="h-3 w-3 mr-1" />

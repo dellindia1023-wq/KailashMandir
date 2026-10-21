@@ -3,6 +3,8 @@ import SEOHead from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PageHeroBanner from "@/components/PageHeroBanner";
+import sanctumOverview from "@/assets/gallery/sanctum-overview.jpg";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -82,21 +84,20 @@ const NoticeBoard = () => {
         }}
       />
       <Header />
-      <main className="pt-20 pb-16">
-        <div className="container mx-auto px-4 py-8">
-          {/* Page Header */}
-          <div className="text-center mb-10">
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">
-              <Megaphone className="h-3 w-3 mr-1" />
-              Temple Announcements
+      <main>
+        <PageHeroBanner
+          image={sanctumOverview}
+          title="Official"
+          highlight="Notice Board"
+          subtitle="Stay updated with important announcements, schedule revisions, and temple news."
+          mantra="सूचना एवं महत्वपूर्ण निर्देश"
+          badge={
+            <Badge className="bg-primary/20 text-gold-light border-gold/30 text-xs px-3 py-1 font-medium">
+              मंदिर सूचना पट्ट · Announcements
             </Badge>
-            <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3">
-              Notice <span className="text-gradient-sacred">Board</span>
-            </h1>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Stay updated with important announcements from Kailash Mandir Agra.
-            </p>
-          </div>
+          }
+        />
+        <div className="container mx-auto px-4 py-8 md:py-12">
 
           {/* Search & Filter */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8 max-w-xl mx-auto">

@@ -40,7 +40,7 @@ export const AdminBlogs = () => {
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<"all" | "draft" | "published">("published");
+  const [filterStatus, setFilterStatus] = useState<"all" | "draft" | "published">("all");
 
   // Initialize categories on mount
   useEffect(() => {

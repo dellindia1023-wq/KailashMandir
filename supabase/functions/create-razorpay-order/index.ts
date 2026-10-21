@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -47,6 +47,24 @@ serve(async (req: Request) => {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
+    }
+
+    let isAdmin = false;
+    try {
+      const { data: hasAdminRole } = await supabaseAdmin.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+      isAdmin = Boolean(hasAdminRole);
+      if (!isAdmin) {
+        const { data: hasSuperAdminRole } = await supabaseAdmin.rpc("has_role", {
+          _user_id: user.id,
+          _role: "super_admin",
+        });
+        isAdmin = Boolean(hasSuperAdminRole);
+      }
+    } catch {
+      isAdmin = false;
     }
 
     let body: unknown;
@@ -129,12 +147,94 @@ serve(async (req: Request) => {
         });
       }
 
+      // Fetch Puja & booking settings for server-side price validation
+      const { data: pujaRecord, error: pujaError } = await supabaseAdmin
+        .from("pujas")
+        .select("id, name, price, is_active, puja_booking_settings(*)")
+        .eq("id", pujaId)
+        .maybeSingle();
+
+      if (pujaError || !pujaRecord) {
+        console.error("Puja lookup error:", pujaError);
+        return new Response(JSON.stringify({ error: "Puja not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      if (pujaRecord.is_active === false) {
+        return new Response(JSON.stringify({ error: "This puja is currently inactive" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const bookingSettings = Array.isArray(pujaRecord.puja_booking_settings)
+        ? pujaRecord.puja_booking_settings[0]
+        : pujaRecord.puja_booking_settings;
+
+      const basePrice = Number(bookingSettings?.price ?? pujaRecord.price ?? 0);
+
+      // Validate optional Samagri / additional charges against database configuration
+      let expectedAdditionalTotal = 0;
+      const validatedCharges: Array<{ label: string; amount: number }> = [];
+
+      if (Array.isArray(additionalCharges) && additionalCharges.length > 0) {
+        const allowedConfigs: Array<any> = Array.isArray(bookingSettings?.additional_charges)
+          ? bookingSettings.additional_charges
+          : [];
+
+        for (const rawCharge of additionalCharges) {
+          const label = typeof rawCharge.label === "string"
+            ? rawCharge.label.trim().slice(0, 100)
+            : typeof rawCharge.name === "string"
+            ? rawCharge.name.trim().slice(0, 100)
+            : "";
+          if (!label) continue;
+
+          const match = allowedConfigs.find(
+            (c: any) => ((c.name || c.label) as string)?.trim().toLowerCase() === label.toLowerCase()
+          );
+
+          if (match) {
+            const isIncluded = Boolean(match.is_included ?? match.included);
+            const chargePrice = isIncluded ? 0 : Number(match.price ?? match.amount ?? 0);
+            validatedCharges.push({
+              label: match.name || label,
+              amount: Math.max(0, chargePrice),
+            });
+            expectedAdditionalTotal += Math.max(0, chargePrice);
+          } else if (allowedConfigs.length === 0) {
+            const fallbackAmount = typeof rawCharge.amount === "number" && Number.isFinite(rawCharge.amount)
+              ? Math.max(0, rawCharge.amount)
+              : 0;
+            validatedCharges.push({ label, amount: fallbackAmount });
+            expectedAdditionalTotal += fallbackAmount;
+          }
+        }
+      }
+
+      const expectedTotal = Math.round((basePrice + expectedAdditionalTotal) * 100) / 100;
+
       if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
         return new Response(JSON.stringify({ error: "Invalid amount" }), {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
+
+      if (Math.abs(amount - expectedTotal) > 1) {
+        console.error("[create-razorpay-order] Amount discrepancy:", { clientAmount: amount, expectedTotal, basePrice, expectedAdditionalTotal });
+        return new Response(JSON.stringify({
+          error: `Booking amount discrepancy. Expected ₹${expectedTotal}, received ₹${amount}`,
+        }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      // Enforce server-calculated price
+      orderAmount = expectedTotal;
 
       if (typeof bookingDate !== "string" || !DATE_REGEX.test(bookingDate)) {
         return new Response(JSON.stringify({ error: "Invalid booking date format (YYYY-MM-DD)" }), {
@@ -160,12 +260,6 @@ serve(async (req: Request) => {
       const safeGotra = typeof devoteeGotra === "string" ? devoteeGotra.trim().slice(0, 50) || null : null;
       const safeInstructions = typeof specialInstructions === "string" ? specialInstructions.trim().slice(0, 500) || null : null;
       const safeName = devoteeName.trim().slice(0, 100);
-      const safeCharges = Array.isArray(additionalCharges)
-        ? additionalCharges.map((charge: any) => ({
-            label: typeof charge.label === "string" ? charge.label.trim().slice(0, 100) : "",
-            amount: typeof charge.amount === "number" && Number.isFinite(charge.amount) ? charge.amount : 0,
-          }))
-        : null;
 
       createBookingPayload = {
         user_id: user.id,
@@ -175,10 +269,10 @@ serve(async (req: Request) => {
         devotee_name: safeName,
         devotee_gotra: safeGotra,
         special_instructions: safeInstructions,
-        amount: amount,
+        amount: expectedTotal,
         payment_status: "pending",
         booking_status: "pending",
-        additional_charges: safeCharges,
+        additional_charges: validatedCharges.length > 0 ? validatedCharges : null,
       };
 
       notes.puja_id = pujaId;

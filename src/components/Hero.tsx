@@ -113,7 +113,7 @@ const Hero = () => {
   return (
     <section
       id="home"
-      className="relative h-[calc(75vh-64px)] md:h-[85vh] min-h-[520px] flex items-center justify-center overflow-hidden"
+      className="relative min-h-[560px] sm:min-h-[600px] md:h-[84vh] md:min-h-[640px] flex items-center justify-center overflow-hidden"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
@@ -143,7 +143,7 @@ const Hero = () => {
             <img
               src={slide.url}
               alt={slide.alt || "Hero banner"}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
               width={1920}
               height={1080}
               decoding="async"
@@ -162,14 +162,15 @@ const Hero = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-saffron/40 via-orange/30 to-gold/20" />
       )}
 
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-divine z-[1]" />
+      {/* Carefully balanced gradient overlay — preserves vibrant temple view while securing text contrast */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/65 z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/25 opacity-70 z-[1]" />
 
-      {/* Floating orbs */}
-      <div className="hidden md:block absolute top-16 left-8 w-16 h-16 rounded-full bg-gold/20 blur-2xl animate-float z-[2]" />
-      <div className="hidden md:block absolute top-32 right-16 w-24 h-24 rounded-full bg-saffron/15 blur-3xl animate-float z-[2]" style={{ animationDelay: "1.5s" }} />
-      <div className="hidden md:block absolute bottom-40 right-20 w-32 h-32 rounded-full bg-saffron/20 blur-3xl animate-float z-[2]" style={{ animationDelay: "3s" }} />
-      <div className="hidden md:block absolute bottom-28 left-16 w-20 h-20 rounded-full bg-gold/15 blur-2xl animate-float z-[2]" style={{ animationDelay: "4.5s" }} />
+      {/* Subtle floating glow orbs */}
+      <div className="hidden md:block absolute top-16 left-8 w-16 h-16 rounded-full bg-gold/15 blur-2xl animate-float z-[2]" />
+      <div className="hidden md:block absolute top-32 right-16 w-24 h-24 rounded-full bg-saffron/10 blur-3xl animate-float z-[2]" style={{ animationDelay: "1.5s" }} />
+      <div className="hidden md:block absolute bottom-40 right-20 w-32 h-32 rounded-full bg-saffron/15 blur-3xl animate-float z-[2]" style={{ animationDelay: "3s" }} />
+      <div className="hidden md:block absolute bottom-28 left-16 w-20 h-20 rounded-full bg-gold/10 blur-2xl animate-float z-[2]" style={{ animationDelay: "4.5s" }} />
 
       {/* Floating diya flames */}
       <div className="hidden md:block absolute top-24 right-10 animate-float opacity-60 z-[2]" style={{ animationDelay: "1s" }}>
@@ -179,32 +180,19 @@ const Hero = () => {
         <Flame className="h-4 w-4 text-saffron animate-diya-glow" />
       </div>
 
-      {/* Particle dots */}
-      {[...Array(4)].map((_, i) => (
-        <div
-          key={i}
-          className="hidden md:block absolute w-1 h-1 rounded-full bg-gold/40 animate-sparkle z-[2]"
-          style={{
-            top: `${15 + i * 14}%`,
-            left: `${10 + i * 16}%`,
-            animationDelay: `${i * 0.5}s`,
-          }}
-        />
-      ))}
-
       {/* Slide navigation arrows - only show if multiple images */}
       {slides.length > 1 && (
         <>
           <button
             onClick={prev}
-            className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/20 backdrop-blur-sm border border-primary-foreground/20 flex items-center justify-center text-primary-foreground/80 hover:bg-background/30 transition-colors"
+            className="absolute left-2 sm:left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/35 hover:bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
           </button>
           <button
             onClick={next}
-            className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/20 backdrop-blur-sm border border-primary-foreground/20 flex items-center justify-center text-primary-foreground/80 hover:bg-background/30 transition-colors"
+            className="absolute right-2 sm:right-4 md:right-6 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/35 hover:bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
             aria-label="Next slide"
           >
             <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
@@ -214,7 +202,7 @@ const Hero = () => {
 
       {/* Dot indicators - only show if multiple images */}
       {slides.length > 1 && (
-        <div className="absolute bottom-16 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+        <div className="absolute bottom-14 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
           {slides.map((_, i) => (
             <button
               key={i}
@@ -222,8 +210,8 @@ const Hero = () => {
               aria-label={`Go to slide ${i + 1}`}
               className={`h-2 rounded-full transition-all duration-500 ${
                 i === current
-                  ? "w-8 bg-gold"
-                  : "w-2 bg-primary-foreground/40 hover:bg-primary-foreground/60"
+                  ? "w-8 bg-gold shadow-md"
+                  : "w-2 bg-white/40 hover:bg-white/70"
               }`}
             />
           ))}
@@ -231,51 +219,53 @@ const Hero = () => {
       )}
 
       {/* Content overlay */}
-      <div className="relative z-10 container mx-auto px-4 md:px-6 text-center pt-16 md:pt-0">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 md:px-8 text-center pt-16 sm:pt-20 pb-12 md:py-16">
         <div className="max-w-4xl mx-auto">
-          <p className="animate-text-shimmer font-heading text-base md:text-xl mb-3 md:mb-4 tracking-wider animate-fade-in">
+          <p className="inline-block text-gold-light font-heading text-sm sm:text-base md:text-lg mb-2 sm:mb-3 tracking-widest uppercase font-semibold drop-shadow-md">
             {t("hero.mantra")}
           </p>
 
           <h1
-            className="font-heading text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary-foreground mb-4 md:mb-6 animate-fade-in"
+            className="font-heading text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-3 sm:mb-4 tracking-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]"
             style={{ animationDelay: "0.2s" }}
           >
             {heroTitle}
             {heroSubtitle ? (
-              <span className="block animate-text-shimmer text-2xl md:text-4xl lg:text-5xl">{heroSubtitle}</span>
+              <span className="block mt-1 sm:mt-2 text-gold-light font-medium text-xl sm:text-3xl md:text-4xl lg:text-5xl drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                {heroSubtitle}
+              </span>
             ) : null}
           </h1>
 
           <p
-            className="text-sm md:text-lg lg:text-xl text-primary-foreground/90 max-w-3xl mx-auto mb-6 md:mb-8 animate-fade-in px-2 leading-relaxed"
+            className="text-sm sm:text-base md:text-lg lg:text-xl text-white/95 max-w-2xl sm:max-w-3xl mx-auto mb-6 sm:mb-8 px-2 leading-relaxed font-normal drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
             style={{ animationDelay: "0.4s" }}
           >
             {t("hero.subtitle")}
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 animate-fade-in" style={{ animationDelay: "0.6s" }}>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4" style={{ animationDelay: "0.6s" }}>
             <Link to="/darshan-timings" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="w-full sm:w-auto bg-gold hover:bg-gold-light text-accent-foreground font-semibold px-6 md:px-8 py-5 md:py-6 text-base md:text-lg glow-gold animate-diya-glow"
+                className="w-full sm:w-auto bg-gradient-to-r from-gold via-amber-500 to-gold hover:from-gold-light hover:to-amber-400 text-slate-950 font-semibold px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base md:text-lg shadow-xl shadow-gold/20 hover:shadow-gold/40 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl"
               >
                 <Calendar className="mr-2 h-5 w-5" />
                 {t("hero.viewDarshanTimings")}
               </Button>
             </Link>
             <Link to={heroButtonLink} className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto border-2 border-primary-foreground/50 text-foreground dark:text-primary-foreground hover:bg-primary-foreground/10 px-6 md:px-8 py-5 md:py-6 text-base md:text-lg backdrop-blur-sm"
-                >
-                  {heroButtonText}
-                </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto border-2 border-white/60 bg-black/25 text-white hover:bg-white/20 hover:text-white px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base md:text-lg backdrop-blur-md transition-all rounded-xl hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {heroButtonText}
+              </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 md:gap-8 mt-8 md:mt-16 animate-fade-in" style={{ animationDelay: "0.8s" }}>
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 mt-8 sm:mt-12 md:mt-14 max-w-2xl mx-auto" style={{ animationDelay: "0.8s" }}>
             {[
               { value: `${settings.years_of_heritage}+`, label: t("hero.yearsHeritage") },
               { value: `${settings.daily_devotees / 1000}K+`, label: t("hero.dailyDevotees") },
@@ -283,10 +273,10 @@ const Hero = () => {
             ].map((stat, i) => (
               <div
                 key={i}
-                className="text-center relative p-3 rounded-xl bg-primary-foreground/5 backdrop-blur-sm border border-primary-foreground/10 animate-shimmer"
+                className="text-center p-2.5 sm:p-4 rounded-xl bg-black/30 backdrop-blur-md border border-white/15 shadow-lg"
               >
-                <p className="text-2xl md:text-4xl font-heading font-bold text-gold">{stat.value}</p>
-                <p className="text-xs md:text-base text-primary-foreground/80">{stat.label}</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-gold drop-shadow">{stat.value}</p>
+                <p className="text-[11px] sm:text-xs md:text-sm text-white/85 font-medium mt-0.5">{stat.label}</p>
               </div>
             ))}
           </div>

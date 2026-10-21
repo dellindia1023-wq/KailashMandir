@@ -182,9 +182,14 @@ const AboutPage = () => {
         <PageHeroBanner
           image={aboutData?.hero_image_url || templeHero}
           title={aboutData?.hero_title || t("about.title")}
-          highlight={aboutData?.hero_subtitle || t("about.titleHighlight")}
+          highlight={t("about.titleHighlight")}
           subtitle={aboutData?.hero_subtitle || t("about.description2")}
-          mantra="ॐ नमः शिवाय"
+          mantra="परशुराम स्थापित युग युगांतर महादेव"
+          badge={
+            <Badge className="bg-primary/20 text-gold-light border-gold/30 text-xs px-3 py-1 font-medium">
+              प्राचीन तीर्थ · 500+ Years Heritage
+            </Badge>
+          }
         />
 
         {/* Section 1: Introduction */}
